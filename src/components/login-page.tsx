@@ -27,6 +27,8 @@ import {
   Sun,
 } from "lucide-react"
 
+import { toast } from "sonner"
+
 interface LoginPageProps {
   onSuccess?: (email: string) => void
 }
@@ -59,14 +61,17 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
 
     if (!email.trim()) {
       setError("Please enter your email address.")
+      toast.error("Authentication Error", { description: "Please enter your email address." })
       return
     }
     if (!password) {
       setError("Please enter your password.")
+      toast.error("Authentication Error", { description: "Please enter your password." })
       return
     }
     if (password.length < 6) {
       setError("Password must be at least 6 characters.")
+      toast.error("Authentication Error", { description: "Password must be at least 6 characters." })
       return
     }
 
@@ -76,10 +81,11 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
     setTimeout(() => {
       setIsLoading(false)
       setIsSuccess(true)
+      toast.success("Welcome back!", { description: `Logged in as ${email}` })
       if (onSuccess) {
         onSuccess(email)
       }
-    }, 1200)
+    }, 1000)
   }
 
   return (

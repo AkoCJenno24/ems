@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { LoginPage } from "@/components/login-page"
 import { DashboardPage } from "@/components/dashboard-page"
+import { Toaster } from "@/components/ui/sonner"
 
 export default function App() {
   const [view, setView] = useState<"login" | "dashboard">("login")
@@ -15,14 +16,17 @@ export default function App() {
     setView("login")
   }
 
-  if (view === "login") {
-    return <LoginPage onSuccess={handleLoginSuccess} />
-  }
-
   return (
-    <DashboardPage
-      userEmail={userEmail}
-      onLogout={handleLogout}
-    />
+    <>
+      <Toaster richColors position="top-center" duration={1000} />
+      {view === "login" ? (
+        <LoginPage onSuccess={handleLoginSuccess} />
+      ) : (
+        <DashboardPage
+          userEmail={userEmail}
+          onLogout={handleLogout}
+        />
+      )}
+    </>
   )
 }

@@ -477,7 +477,7 @@ export function LeaveManagementPage({ initialSubTab = "inbox", onTabChange }: Le
   }, [calendarDeptFilter])
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto">
+    <div className="flex flex-col gap-6 w-full">
       {/* 1. Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

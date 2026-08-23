@@ -869,7 +869,7 @@ export function DashboardPage({ userEmail = "admin@ems.company", onLogout }: Das
                           >
                             <Bell className="h-4 w-4" />
                             {unreadNotifCount > 0 && (
-                              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-1 shadow-xs ring-2 ring-background animate-pulse">
+                              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-bold text-white px-1 shadow-xs ring-2 ring-background">
                                 {unreadNotifCount}
                               </span>
                             )}
@@ -948,7 +948,7 @@ export function DashboardPage({ userEmail = "admin@ems.company", onLogout }: Das
                             </div>
 
                             {!item.read && (
-                              <span className="size-2 rounded-full bg-primary shrink-0 self-center" />
+                              <span className="size-2 rounded-full bg-emerald-500 shrink-0 self-center" />
                             )}
                           </DropdownMenuItem>
                         )
@@ -1010,7 +1010,7 @@ export function DashboardPage({ userEmail = "admin@ems.company", onLogout }: Das
         </header>
 
         {/* Main Content Area */}
-        <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 max-w-7xl w-full mx-auto">
+        <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 w-full">
           {isEmployeeSection ? (
             /* Manage Employees View (CRUD, Profiles, Search, Filters) */
             <ManageEmployees

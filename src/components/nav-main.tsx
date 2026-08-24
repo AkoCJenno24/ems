@@ -16,14 +16,14 @@ import {
 } from "@/components/ui/sidebar"
 import { ChevronRightIcon } from "lucide-react"
 
-interface SubNavItem {
+export interface SubNavItem {
   title: string
   url: string
   icon?: React.ReactNode
   isButton?: boolean
 }
 
-interface NavItem {
+export interface NavItem {
   title: string
   url: string
   icon: React.ReactNode
@@ -34,12 +34,14 @@ interface NavItem {
 interface NavMainProps {
   items: NavItem[]
   activeNav?: string
-  onSelectNav?: (title: string) => void
+  currentPath?: string
+  onSelectNav?: (title: string, url?: string) => void
 }
 
 export function NavMain({
   items,
   activeNav,
+  currentPath,
   onSelectNav,
 }: NavMainProps) {
   return (
@@ -48,23 +50,26 @@ export function NavMain({
       <SidebarMenu>
         {items.map((item) => {
           const hasSubItems = Boolean(item.items?.length)
-          const isSubItemActive = item.items?.some((sub) => sub.title === activeNav) ?? false
-          const isItemActive = activeNav ? (activeNav === item.title || isSubItemActive) : Boolean(item.isActive)
+          const isCurrentBaseUrl = currentPath
+            ? currentPath.split("?")[0] === item.url.split("?")[0] && item.url !== "#"
+            : false
+          const isSubItemActive = item.items?.some((sub) =>
+            currentPath ? currentPath === sub.url || (currentPath.startsWith(item.url) && currentPath.includes(sub.url.split("?")[1] || "nomatch")) : sub.title === activeNav
+          ) ?? false
+          const isItemActive = isCurrentBaseUrl || isSubItemActive || (activeNav ? activeNav === item.title : Boolean(item.isActive))
 
           return (
             <Collapsible
               key={item.title}
-              defaultOpen={isItemActive || isSubItemActive}
+              defaultOpen={isItemActive}
               render={<SidebarMenuItem />}
             >
               <SidebarMenuButton
                 tooltip={item.title}
-                isActive={activeNav ? activeNav === item.title : Boolean(item.isActive)}
+                isActive={isItemActive && (!hasSubItems || currentPath === item.url)}
                 onClick={(e) => {
-                  if (item.url === "#") {
-                    e.preventDefault()
-                  }
-                  onSelectNav?.(item.title)
+                  e.preventDefault()
+                  onSelectNav?.(item.title, item.url)
                 }}
                 render={<a href={item.url} />}
               >
@@ -84,7 +89,9 @@ export function NavMain({
                   <CollapsibleContent>
                     <SidebarMenuSub>
                       {item.items?.map((subItem) => {
-                        const isThisSubActive = activeNav === subItem.title
+                        const isThisSubActive = currentPath
+                          ? currentPath === subItem.url || (subItem.url.includes("?") && currentPath.includes(subItem.url.split("?")[1]))
+                          : activeNav === subItem.title
 
                         return (
                           <SidebarMenuSubItem key={subItem.title}>
@@ -96,10 +103,8 @@ export function NavMain({
                                   : "cursor-pointer"
                               }
                               onClick={(e) => {
-                                if (subItem.url === "#") {
-                                  e.preventDefault()
-                                }
-                                onSelectNav?.(subItem.title)
+                                e.preventDefault()
+                                onSelectNav?.(subItem.title, subItem.url)
                               }}
                               render={<a href={subItem.url} />}
                             >

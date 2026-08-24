@@ -10,6 +10,9 @@ import { PerformancePage, type PerformanceTab } from "@/components/performance-p
 import { ReportsPage, type ReportsTab } from "@/components/reports-page"
 import { SettingsPage, type SettingsTab } from "@/components/settings-page"
 import { SupportPage, type SupportTab } from "@/components/support-page"
+import { UpgradeToProPage } from "@/components/upgrade-to-pro-page"
+import { AccountPage } from "@/components/account-page"
+import { BillingPage } from "@/components/billing-page"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -512,6 +515,10 @@ export function DashboardPage({ userEmail = "admin@ems.company", onLogout }: Das
     activeNav === "Knowledge Base" ||
     activeNav === "Service Health"
 
+  const isUpgradeProSection = activeNav === "Upgrade to Pro"
+  const isAccountSection = activeNav === "Account"
+  const isBillingSection = activeNav === "Billing"
+
   const getAttendanceSubTab = (): AttendanceTab => {
     switch (activeNav) {
       case "Shift & Schedules":
@@ -766,6 +773,24 @@ export function DashboardPage({ userEmail = "admin@ems.company", onLogout }: Das
       return {
         parent: "Support",
         page: activeNav === "Support" ? "Support Tickets" : activeNav,
+      }
+    }
+    if (isUpgradeProSection) {
+      return {
+        parent: "Account",
+        page: "Upgrade to Pro",
+      }
+    }
+    if (isAccountSection) {
+      return {
+        parent: "Profile",
+        page: "Account Settings",
+      }
+    }
+    if (isBillingSection) {
+      return {
+        parent: "Profile",
+        page: "Billing & Subscriptions",
       }
     }
     return {
@@ -1065,6 +1090,25 @@ export function DashboardPage({ userEmail = "admin@ems.company", onLogout }: Das
               initialSubTab={getSupportSubTab()}
               onTabChange={handleSupportTabChange}
               userEmail={userEmail}
+            />
+          ) : isUpgradeProSection ? (
+            /* Upgrade to Pro Section */
+            <UpgradeToProPage
+              userEmail={userEmail}
+              onBackToDashboard={() => setActiveNav("Dashboard")}
+            />
+          ) : isAccountSection ? (
+            /* Account Settings Section */
+            <AccountPage
+              userEmail={userEmail}
+              onBackToDashboard={() => setActiveNav("Dashboard")}
+            />
+          ) : isBillingSection ? (
+            /* Billing & Subscriptions Section */
+            <BillingPage
+              userEmail={userEmail}
+              onNavigateToUpgrade={() => setActiveNav("Upgrade to Pro")}
+              onBackToDashboard={() => setActiveNav("Dashboard")}
             />
           ) : (
             /* Dashboard Overview View */

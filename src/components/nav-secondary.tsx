@@ -1,5 +1,4 @@
 import * as React from "react"
-
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -11,6 +10,7 @@ import {
 export function NavSecondary({
   items,
   activeNav,
+  currentPath,
   onSelectNav,
   ...props
 }: {
@@ -20,14 +20,15 @@ export function NavSecondary({
     icon: React.ReactNode
   }[]
   activeNav?: string
-  onSelectNav?: (title: string) => void
+  currentPath?: string
+  onSelectNav?: (title: string, url?: string) => void
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   return (
     <SidebarGroup {...props}>
       <SidebarGroupContent>
         <SidebarMenu>
           {items.map((item) => {
-            const isActive = activeNav === item.title
+            const isActive = currentPath ? currentPath.startsWith(item.url) : activeNav === item.title
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
@@ -36,7 +37,7 @@ export function NavSecondary({
                   className="cursor-pointer"
                   onClick={(e) => {
                     e.preventDefault()
-                    onSelectNav?.(item.title)
+                    onSelectNav?.(item.title, item.url)
                   }}
                   render={<a href={item.url} />}
                 >

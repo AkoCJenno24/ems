@@ -46,7 +46,8 @@ import {
 export interface Employee {
   id: string
   name: string
-  role: string
+  jobTitle: string
+  role: "Admin" | "Employee"
   department: string
   employmentType: "Full-time" | "Contract" | "Part-time"
   status: "Active" | "On Leave" | "Remote" | "Inactive"
@@ -64,7 +65,8 @@ export const initialEmployeeList: Employee[] = [
   {
     id: "EMP-001",
     name: "Alex Morgan",
-    role: "Senior Fullstack Engineer",
+    jobTitle: "Senior Fullstack Engineer",
+    role: "Admin",
     department: "Engineering",
     employmentType: "Full-time",
     status: "Active",
@@ -80,7 +82,8 @@ export const initialEmployeeList: Employee[] = [
   {
     id: "EMP-002",
     name: "Sarah Chen",
-    role: "Lead Product Designer",
+    jobTitle: "Lead Product Designer",
+    role: "Employee",
     department: "Product",
     employmentType: "Full-time",
     status: "Active",
@@ -96,7 +99,8 @@ export const initialEmployeeList: Employee[] = [
   {
     id: "EMP-003",
     name: "Marcus Vance",
-    role: "DevOps Architect",
+    jobTitle: "DevOps Architect",
+    role: "Employee",
     department: "Infrastructure",
     employmentType: "Full-time",
     status: "Remote",
@@ -112,7 +116,8 @@ export const initialEmployeeList: Employee[] = [
   {
     id: "EMP-004",
     name: "Elena Rostova",
-    role: "HR Operations Lead",
+    jobTitle: "HR Operations Lead",
+    role: "Admin",
     department: "People & Culture",
     employmentType: "Full-time",
     status: "On Leave",
@@ -128,7 +133,8 @@ export const initialEmployeeList: Employee[] = [
   {
     id: "EMP-005",
     name: "David Kim",
-    role: "Frontend Engineer",
+    jobTitle: "Frontend Engineer",
+    role: "Employee",
     department: "Engineering",
     employmentType: "Full-time",
     status: "Active",
@@ -144,7 +150,8 @@ export const initialEmployeeList: Employee[] = [
   {
     id: "EMP-006",
     name: "Sophia Martinez",
-    role: "Payroll Specialist",
+    jobTitle: "Payroll Specialist",
+    role: "Employee",
     department: "Finance",
     employmentType: "Full-time",
     status: "Active",
@@ -160,7 +167,8 @@ export const initialEmployeeList: Employee[] = [
   {
     id: "EMP-007",
     name: "Lucas Wright",
-    role: "Growth Marketing Manager",
+    jobTitle: "Growth Marketing Manager",
+    role: "Employee",
     department: "Sales & Marketing",
     employmentType: "Full-time",
     status: "Active",
@@ -176,7 +184,8 @@ export const initialEmployeeList: Employee[] = [
   {
     id: "EMP-008",
     name: "Maya Lin",
-    role: "QA Automation Engineer",
+    jobTitle: "QA Automation Engineer",
+    role: "Employee",
     department: "Engineering",
     employmentType: "Contract",
     status: "Remote",
@@ -192,7 +201,8 @@ export const initialEmployeeList: Employee[] = [
   {
     id: "EMP-009",
     name: "Jonathan Reed",
-    role: "Security Compliance Officer",
+    jobTitle: "Security Compliance Officer",
+    role: "Admin",
     department: "Infrastructure",
     employmentType: "Full-time",
     status: "Inactive",
@@ -207,15 +217,18 @@ export const initialEmployeeList: Employee[] = [
   },
 ]
 
+import { useEMSStore } from "@/store/use-ems-store"
+
 interface ManageEmployeesProps {
   initialOpenAdd?: boolean
   onCloseAdd?: () => void
 }
 
 export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEmployeesProps) {
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployeeList)
+  const { employees, addEmployee, updateEmployee, deleteEmployee } = useEMSStore()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedDept, setSelectedDept] = useState("All")
+  const [selectedRole, setSelectedRole] = useState("All")
   const [selectedStatus, setSelectedStatus] = useState("All")
   const [selectedType, setSelectedType] = useState("All")
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -230,7 +243,8 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
   const [formData, setFormData] = useState<Partial<Employee>>({
     name: "",
     email: "",
-    role: "",
+    jobTitle: "",
+    role: "Employee",
     department: "Engineering",
     employmentType: "Full-time",
     status: "Active",
@@ -258,18 +272,20 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
       const matchesSearch =
         emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         emp.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        emp.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (emp.jobTitle && emp.jobTitle.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (emp.role && emp.role.toLowerCase().includes(searchQuery.toLowerCase())) ||
         emp.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
         emp.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         emp.location.toLowerCase().includes(searchQuery.toLowerCase())
 
       const matchesDept = selectedDept === "All" || emp.department === selectedDept
+      const matchesRole = selectedRole === "All" || emp.role === selectedRole
       const matchesStatus = selectedStatus === "All" || emp.status === selectedStatus
       const matchesType = selectedType === "All" || emp.employmentType === selectedType
 
-      return matchesSearch && matchesDept && matchesStatus && matchesType
+      return matchesSearch && matchesDept && matchesRole && matchesStatus && matchesType
     })
-  }, [employees, searchQuery, selectedDept, selectedStatus, selectedType])
+  }, [employees, searchQuery, selectedDept, selectedRole, selectedStatus, selectedType])
 
   // Pagination slice
   const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage) || 1
@@ -315,7 +331,8 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
     setFormData({
       name: "",
       email: "",
-      role: "",
+      jobTitle: "",
+      role: "Employee",
       department: "Engineering",
       employmentType: "Full-time",
       status: "Active",
@@ -330,15 +347,15 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.name?.trim() || !formData.role?.trim()) return
+    if (!formData.name?.trim() || !formData.jobTitle?.trim()) return
 
-    const newEmp: Employee = {
-      id: `EMP-0${employees.length + 1 < 10 ? "0" : ""}${employees.length + 1}`,
+    const newEmp = addEmployee({
       name: formData.name.trim(),
       email:
         formData.email?.trim() ||
         `${formData.name.toLowerCase().replace(/\s+/g, ".")}@ems.company`,
-      role: formData.role.trim(),
+      jobTitle: formData.jobTitle.trim(),
+      role: (formData.role as "Admin" | "Employee") || "Employee",
       department: formData.department || "Engineering",
       employmentType: (formData.employmentType as Employee["employmentType"]) || "Full-time",
       status: (formData.status as Employee["status"]) || "Active",
@@ -349,11 +366,10 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
       salaryBand: formData.salaryBand?.trim() || "Standard",
       bio: formData.bio?.trim() || "New team member onboarded to the workforce.",
       avatar: `https://images.unsplash.com/photo-${1534528741775 + employees.length}?w=128&h=128&dpr=2&q=80`,
-    }
+    })
 
-    setEmployees([newEmp, ...employees])
     toast.success("Employee Profile Created", {
-      description: `${newEmp.name} registered as ${newEmp.role} in ${newEmp.department}.`,
+      description: `${newEmp.name} registered as ${newEmp.jobTitle} (Role: ${newEmp.role}) in ${newEmp.department}.`,
     })
     setShowAddModal(false)
     onCloseAdd?.()
@@ -369,11 +385,7 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
     e.preventDefault()
     if (!selectedEmployeeForEdit || !formData.name?.trim()) return
 
-    setEmployees((prev) =>
-      prev.map((item) =>
-        item.id === selectedEmployeeForEdit.id ? ({ ...item, ...formData } as Employee) : item
-      )
-    )
+    updateEmployee(selectedEmployeeForEdit.id, formData)
 
     toast.success("Employee Updated", {
       description: `Changes saved for ${formData.name}.`,
@@ -386,16 +398,9 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
     if (!selectedEmployeeForArchive) return
 
     const willBeActive = selectedEmployeeForArchive.status === "Inactive"
-    setEmployees((prev) =>
-      prev.map((item) =>
-        item.id === selectedEmployeeForArchive.id
-          ? {
-              ...item,
-              status: willBeActive ? "Active" : "Inactive",
-            }
-          : item
-      )
-    )
+    updateEmployee(selectedEmployeeForArchive.id, {
+      status: willBeActive ? "Active" : "Inactive",
+    })
 
     if (willBeActive) {
       toast.success("Employee Reactivated", {
@@ -412,7 +417,7 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
 
   const handlePermanentDelete = (id: string) => {
     const emp = employees.find((e) => e.id === id)
-    setEmployees((prev) => prev.filter((item) => item.id !== id))
+    deleteEmployee(id)
     setSelectedIds((prev) => prev.filter((item) => item !== id))
     setSelectedEmployeeForArchive(null)
     if (selectedEmployeeForView?.id === id) {
@@ -426,9 +431,7 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
   // Bulk Actions
   const handleBulkStatusChange = (newStatus: Employee["status"]) => {
     const count = selectedIds.length
-    setEmployees((prev) =>
-      prev.map((item) => (selectedIds.includes(item.id) ? { ...item, status: newStatus } : item))
-    )
+    selectedIds.forEach((id) => updateEmployee(id, { status: newStatus }))
     setSelectedIds([])
     toast.success("Bulk Status Updated", {
       description: `Updated status to ${newStatus} for ${count} employees.`,
@@ -437,7 +440,7 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
 
   const handleBulkDelete = () => {
     const count = selectedIds.length
-    setEmployees((prev) => prev.filter((item) => !selectedIds.includes(item.id)))
+    selectedIds.forEach((id) => deleteEmployee(id))
     setSelectedIds([])
     toast.error("Bulk Delete", {
       description: `Removed ${count} employees from records.`,
@@ -445,11 +448,12 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
   }
 
   const exportToCSV = () => {
-    const headers = ["ID", "Name", "Role", "Department", "Type", "Status", "Email", "Phone", "Location", "Joined"]
+    const headers = ["ID", "Name", "Job Title", "App Role", "Department", "Type", "Status", "Email", "Phone", "Location", "Joined"]
     const rows = filteredEmployees.map((e) => [
       e.id,
       `"${e.name}"`,
-      `"${e.role}"`,
+      `"${e.jobTitle || ""}"`,
+      `"${e.role || "Employee"}"`,
       `"${e.department}"`,
       e.employmentType,
       e.status,
@@ -629,6 +633,23 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
                 </select>
               </div>
 
+              {/* Role filter */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground hidden sm:inline">Role:</span>
+                <select
+                  value={selectedRole}
+                  onChange={(e) => {
+                    setSelectedRole(e.target.value)
+                    setCurrentPage(1)
+                  }}
+                  className="flex h-9 rounded-md border border-input bg-background px-2.5 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="All">All App Roles</option>
+                  <option value="Admin">Admin</option>
+                  <option value="Employee">Employee</option>
+                </select>
+              </div>
+
               {/* Status filter */}
               <div className="flex items-center gap-1.5">
                 <span className="text-xs text-muted-foreground hidden sm:inline">Status:</span>
@@ -667,12 +688,13 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
               </div>
 
               {/* Reset Filters button if any filter is active */}
-              {(selectedDept !== "All" || selectedStatus !== "All" || selectedType !== "All" || searchQuery) && (
+              {(selectedDept !== "All" || selectedRole !== "All" || selectedStatus !== "All" || selectedType !== "All" || searchQuery) && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => {
                     setSelectedDept("All")
+                    setSelectedRole("All")
                     setSelectedStatus("All")
                     setSelectedType("All")
                     setSearchQuery("")
@@ -746,7 +768,8 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
                     />
                   </th>
                   <th className="px-4 py-3.5 font-semibold">Employee</th>
-                  <th className="px-4 py-3.5 font-semibold">Role & Title</th>
+                  <th className="px-4 py-3.5 font-semibold">Job Title</th>
+                  <th className="px-4 py-3.5 font-semibold">App Role</th>
                   <th className="px-4 py-3.5 font-semibold">Department</th>
                   <th className="px-4 py-3.5 font-semibold">Status</th>
                   <th className="px-4 py-3.5 font-semibold">Type</th>
@@ -798,12 +821,23 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
                           </div>
                         </td>
 
-                        {/* Role */}
+                        {/* Job Title */}
                         <td className="px-4 py-3.5">
-                          <span className="font-medium text-foreground text-xs sm:text-sm">{emp.role}</span>
+                          <span className="font-medium text-foreground text-xs sm:text-sm">{emp.jobTitle}</span>
                           {emp.salaryBand && (
                             <span className="block text-[11px] text-muted-foreground">{emp.salaryBand}</span>
                           )}
+                        </td>
+
+                        {/* App Role */}
+                        <td className="px-4 py-3.5">
+                          <Badge
+                            variant={emp.role === "Admin" ? "default" : "secondary"}
+                            className="text-[11px] font-medium gap-1"
+                          >
+                            <Shield className="h-3 w-3" />
+                            {emp.role || "Employee"}
+                          </Badge>
                         </td>
 
                         {/* Department */}
@@ -1035,14 +1069,33 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
 
                   <div>
                     <label className="text-xs font-medium text-muted-foreground block mb-1.5">
-                      Job Title / Role *
+                      Job Title *
                     </label>
                     <Input
                       placeholder="e.g. Senior Backend Engineer"
-                      value={formData.role || ""}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                      value={formData.jobTitle || ""}
+                      onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
                       required
                     />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                      App Role (System Access) *
+                    </label>
+                    <select
+                      value={formData.role || "Employee"}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          role: e.target.value as "Admin" | "Employee",
+                        })
+                      }
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <option value="Employee">Employee (Self-Service Portal Access)</option>
+                      <option value="Admin">Admin (Full Console & Billing Access)</option>
+                    </select>
                   </div>
 
                   <div>
@@ -1184,8 +1237,15 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
                       {selectedEmployeeForView.id}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground font-medium">{selectedEmployeeForView.role}</p>
+                  <p className="text-xs text-muted-foreground font-medium">{selectedEmployeeForView.jobTitle}</p>
                   <div className="flex items-center gap-2 mt-1.5">
+                    <Badge
+                      variant={selectedEmployeeForView.role === "Admin" ? "default" : "secondary"}
+                      className="text-[10px] gap-1"
+                    >
+                      <Shield className="h-3 w-3" />
+                      Role: {selectedEmployeeForView.role || "Employee"}
+                    </Badge>
                     <Badge
                       variant={
                         selectedEmployeeForView.status === "Active"
@@ -1394,13 +1454,32 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
 
                   <div>
                     <label className="text-xs font-medium text-muted-foreground block mb-1.5">
-                      Job Title / Role *
+                      Job Title *
                     </label>
                     <Input
-                      value={formData.role || ""}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                      value={formData.jobTitle || ""}
+                      onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
                       required
                     />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                      App Role (System Access) *
+                    </label>
+                    <select
+                      value={formData.role || "Employee"}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          role: e.target.value as "Admin" | "Employee",
+                        })
+                      }
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <option value="Employee">Employee (Self-Service Portal Access)</option>
+                      <option value="Admin">Admin (Full Console & Billing Access)</option>
+                    </select>
                   </div>
 
                   <div>
@@ -1557,7 +1636,7 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
                 </Avatar>
                 <div>
                   <p className="font-semibold text-foreground">{selectedEmployeeForArchive.name}</p>
-                  <p className="text-muted-foreground">{selectedEmployeeForArchive.role} • {selectedEmployeeForArchive.department}</p>
+                  <p className="text-muted-foreground">{selectedEmployeeForArchive.jobTitle} • {selectedEmployeeForArchive.department}</p>
                 </div>
               </div>
             </CardContent>

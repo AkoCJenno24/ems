@@ -20,11 +20,14 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { ChevronsUpDownIcon, SparklesIcon, BadgeCheckIcon, CreditCardIcon, BellIcon, LogOutIcon } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { ChevronsUpDownIcon, SparklesIcon, BadgeCheckIcon, CreditCardIcon, LogOutIcon, Shield } from "lucide-react"
+import { useEMSStore } from "@/store/use-ems-store"
 
 export function NavUser({
   user,
   onLogout,
+  onSelectNav,
 }: {
   user: {
     name: string
@@ -32,76 +35,102 @@ export function NavUser({
     avatar: string
   }
   onLogout?: () => void
+  onSelectNav?: (navTitle: string) => void
 }) {
   const { isMobile } = useSidebar()
+  const currentUser = useEMSStore((state) => state.currentUser)
+  const isAdmin = currentUser.role === "Admin"
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />
+              <SidebarMenuButton size="lg" className="aria-expanded:bg-muted cursor-pointer" />
             }
           >
             <Avatar>
               <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback>CN</AvatarFallback>
+              <AvatarFallback>
+                {user.name.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">{user.name}</span>
-              <span className="truncate text-xs">{user.email}</span>
+              <span className="truncate text-xs text-muted-foreground">{user.email}</span>
             </div>
             <ChevronsUpDownIcon className="ml-auto size-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="min-w-56 rounded-lg"
+            className="min-w-64 rounded-lg"
             side={isMobile ? "bottom" : "right"}
             align="end"
             sideOffset={4}
           >
             <DropdownMenuGroup>
               <DropdownMenuLabel className="p-0 font-normal">
-                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                  <Avatar>
+                <div className="flex items-center gap-2.5 px-2 py-2 text-left text-sm">
+                  <Avatar className="size-9 border border-border">
                     <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback>CN</AvatarFallback>
+                    <AvatarFallback>
+                      {user.name.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
                   </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{user.name}</span>
-                    <span className="truncate text-xs">{user.email}</span>
+                  <div className="grid flex-1 text-left text-sm leading-tight min-w-0">
+                    <span className="truncate font-semibold">{user.name}</span>
+                    <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <Badge variant="outline" className="w-fit text-[10px] font-normal truncate max-w-[120px]">
+                        {currentUser.jobTitle || currentUser.title}
+                      </Badge>
+                      <Badge variant="secondary" className="w-fit text-[10px] gap-1">
+                        <Shield className="size-2.5" />
+                        {currentUser.role}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
               </DropdownMenuLabel>
             </DropdownMenuGroup>
+
+            {isAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    onClick={() => onSelectNav?.("Upgrade to Pro")}
+                    className="cursor-pointer font-medium text-primary hover:text-primary focus:text-primary focus:bg-primary/10"
+                  >
+                    <SparklesIcon className="text-primary size-4" />
+                    Upgrade to Pro
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </>
+            )}
+
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <SparklesIcon
-                />
-                Upgrade to Pro
+              <DropdownMenuItem
+                onClick={() => onSelectNav?.("Account")}
+                className="cursor-pointer"
+              >
+                <BadgeCheckIcon className="size-4" />
+                {isAdmin ? "Account" : "My Profile & Documents"}
               </DropdownMenuItem>
+              {isAdmin && (
+                <DropdownMenuItem
+                  onClick={() => onSelectNav?.("Billing")}
+                  className="cursor-pointer"
+                >
+                  <CreditCardIcon className="size-4" />
+                  Billing & Subscriptions
+                </DropdownMenuItem>
+              )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <BadgeCheckIcon
-                />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCardIcon
-                />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <BellIcon
-                />
-                Notifications
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onLogout} className="cursor-pointer">
-              <LogOutIcon />
+            <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-destructive focus:text-destructive">
+              <LogOutIcon className="size-4" />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

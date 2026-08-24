@@ -22,6 +22,8 @@ import {
   FileText,
   Sparkles,
   ArrowRight,
+  ClockCheck,
+  Megaphone,
 } from "lucide-react"
 
 export function EmployeeHomePage() {
@@ -31,6 +33,7 @@ export function EmployeeHomePage() {
     leaveBalances,
     leaveRequests,
     personalGoals,
+    announcements,
   } = useEMSStore()
 
   // Filter personal leaves
@@ -78,7 +81,7 @@ export function EmployeeHomePage() {
             Hello, {currentUser.name.split(" ")[0]} 👋
           </h1>
           <p className="text-sm text-muted-foreground">
-            {currentUser.title} • {currentUser.department} Department
+            {currentUser.jobTitle || currentUser.title} • {currentUser.department} Department
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -288,7 +291,7 @@ export function EmployeeHomePage() {
                 onClick={() => navigate("/portal/attendance")}
                 className="h-auto flex-col items-start gap-1 p-3 text-left cursor-pointer"
               >
-                <ClockInWidget />
+                <ClockCheck className="size-4 text-blue-500" />
                 <span className="text-xs font-semibold">Timesheet</span>
                 <span className="text-[10px] text-muted-foreground">
                   Monthly punches
@@ -330,6 +333,59 @@ export function EmployeeHomePage() {
                   Ask HR or IT
                 </span>
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Company Bulletins & Announcements */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Megaphone className="size-4 text-primary" />
+                  Company Bulletins
+                </CardTitle>
+                <Badge variant="outline" className="text-[10px]">
+                  Broadcast Feed
+                </Badge>
+              </div>
+              <CardDescription className="text-xs">
+                Official leadership notices and team updates
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 max-h-72 overflow-y-auto pr-1">
+              {announcements.length === 0 ? (
+                <div className="py-4 text-center text-xs text-muted-foreground">
+                  No active bulletins at this time.
+                </div>
+              ) : (
+                announcements.map((ann) => (
+                  <div
+                    key={ann.id}
+                    className="rounded-xl border border-border/70 bg-muted/20 p-3 text-xs space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between font-semibold">
+                      <span className="text-foreground">{ann.title}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {ann.time}
+                      </span>
+                    </div>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {ann.content}
+                    </p>
+                    <div className="flex items-center justify-between pt-1 text-[10px] text-muted-foreground">
+                      <span>Posted by {ann.author}</span>
+                      {ann.priority === "high" && (
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] border-rose-500/30 text-rose-600 dark:text-rose-400"
+                        >
+                          Urgent
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
 

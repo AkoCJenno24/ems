@@ -15,6 +15,9 @@ export interface CurrentUser {
   salaryBand: string
   manager: string
   userRole?: UserRole
+  password?: string
+  temporaryPassword?: string
+  mustChangePassword?: boolean
 }
 
 export interface Employee {
@@ -33,6 +36,9 @@ export interface Employee {
   manager?: string
   salaryBand?: string
   bio?: string
+  temporaryPassword?: string
+  password?: string
+  mustChangePassword?: boolean
 }
 
 export interface Department {
@@ -152,4 +158,13 @@ export interface PersonalGoal {
   currentProgress: number
   dueDate: string
   status: "On Track" | "At Risk" | "Completed"
+}
+
+export interface Announcement {
+  id: string
+  title: string
+  content: string
+  author: string
+  time: string
+  priority: "high" | "normal"
 }

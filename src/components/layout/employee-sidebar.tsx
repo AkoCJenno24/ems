@@ -14,6 +14,7 @@ import {
   SidebarGroupLabel,
   SidebarGroupContent,
 } from "@/components/ui/sidebar"
+import { Badge } from "@/components/ui/badge"
 import { NavUser } from "@/components/nav-user"
 import {
   IconSmartHome,
@@ -28,44 +29,6 @@ import {
 import { UserCheck } from "lucide-react"
 import { useEMSStore } from "@/store/use-ems-store"
 
-const employeeNavItems = [
-  {
-    title: "My Dashboard",
-    url: "/portal",
-    icon: <IconSmartHome className="size-5! shrink-0" size={20} />,
-  },
-  {
-    title: "My Attendance",
-    url: "/portal/attendance",
-    icon: <IconClockCheck className="size-5! shrink-0" size={20} />,
-  },
-  {
-    title: "Leaves & Time-Off",
-    url: "/portal/leaves",
-    icon: <IconCalendarOff className="size-5! shrink-0" size={20} />,
-  },
-  {
-    title: "Payslips & Claims",
-    url: "/portal/payslips",
-    icon: <IconReceipt2 className="size-5! shrink-0" size={20} />,
-  },
-  {
-    title: "Goals & Performance",
-    url: "/portal/performance",
-    icon: <IconTargetArrow className="size-5! shrink-0" size={20} />,
-  },
-  {
-    title: "Profile & Documents",
-    url: "/portal/profile",
-    icon: <IconUser className="size-5! shrink-0" size={20} />,
-  },
-  {
-    title: "Employee Helpdesk",
-    url: "/portal/helpdesk",
-    icon: <IconHelp className="size-5! shrink-0" size={20} />,
-  },
-]
-
 interface EmployeeSidebarProps extends React.ComponentProps<typeof Sidebar> {
   onLogout?: () => void
 }
@@ -74,7 +37,52 @@ export function EmployeeSidebar({ onLogout, ...props }: EmployeeSidebarProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const currentUser = useEMSStore((state) => state.currentUser)
+  const leaveRequests = useEMSStore((state) => state.leaveRequests)
   const isAdmin = currentUser.role === "Admin"
+
+  const myLeaves = leaveRequests.filter(
+    (l) => l.employeeName === currentUser.name || l.employeeId === currentUser.id
+  )
+  const myPendingLeaves = myLeaves.filter((l) => l.status === "Pending")
+
+  const employeeNavItems = [
+    {
+      title: "My Dashboard",
+      url: "/portal",
+      icon: <IconSmartHome className="size-4.5! shrink-0" />,
+    },
+    {
+      title: "My Attendance",
+      url: "/portal/attendance",
+      icon: <IconClockCheck className="size-4.5! shrink-0" />,
+    },
+    {
+      title: "Leaves & Time-Off",
+      url: "/portal/leaves",
+      icon: <IconCalendarOff className="size-4.5! shrink-0" />,
+      badge: myPendingLeaves.length > 0 ? myPendingLeaves.length : undefined,
+    },
+    {
+      title: "Payslips & Claims",
+      url: "/portal/payslips",
+      icon: <IconReceipt2 className="size-4.5! shrink-0" />,
+    },
+    {
+      title: "Goals & Performance",
+      url: "/portal/performance",
+      icon: <IconTargetArrow className="size-4.5! shrink-0" />,
+    },
+    {
+      title: "Profile & Documents",
+      url: "/portal/profile",
+      icon: <IconUser className="size-4.5! shrink-0" />,
+    },
+    {
+      title: "Employee Helpdesk",
+      url: "/portal/helpdesk",
+      icon: <IconHelp className="size-4.5! shrink-0" />,
+    },
+  ]
 
   return (
     <Sidebar variant="inset" {...props}>
@@ -117,10 +125,18 @@ export function EmployeeSidebar({ onLogout, ...props }: EmployeeSidebarProps) {
                       size="default"
                       isActive={isActive}
                       onClick={() => navigate(item.url)}
-                      className="cursor-pointer"
+                      className="cursor-pointer font-medium"
                     >
                       {item.icon}
-                      <span>{item.title}</span>
+                      <span className="flex-1 truncate">{item.title}</span>
+                      {item.badge !== undefined && (
+                        <Badge
+                          variant="secondary"
+                          className="ml-auto h-4.5 min-w-4.5 px-1.5 py-0 text-[10px] font-bold rounded-full justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                        >
+                          {item.badge}
+                        </Badge>
+                      )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )

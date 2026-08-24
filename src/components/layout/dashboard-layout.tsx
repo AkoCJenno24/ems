@@ -16,7 +16,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
@@ -25,13 +24,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { CommandMenu } from "@/components/shared/command-menu"
 import { ThemeToggle } from "@/components/shared/theme-toggle"
 import { useEMSStore } from "@/store/use-ems-store"
 import {
   Bell,
   Search,
-  Sparkles,
-  User,
   Clock,
   Megaphone,
 } from "lucide-react"
@@ -46,10 +44,22 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
   const navigate = useNavigate()
   const leaveRequests = useEMSStore((state) => state.leaveRequests)
   const tickets = useEMSStore((state) => state.tickets)
-  const [globalSearch, setGlobalSearch] = useState("")
+  const [commandOpen, setCommandOpen] = useState(false)
 
   const pendingLeaves = leaveRequests.filter((l) => l.status === "Pending")
   const openTickets = tickets.filter((t) => t.status !== "Resolved")
+
+  // Keyboard shortcut for Cmd+K / Ctrl+K
+  React.useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setCommandOpen((open) => !open)
+      }
+    }
+    document.addEventListener("keydown", down)
+    return () => document.removeEventListener("keydown", down)
+  }, [])
 
   // Generate breadcrumb items from pathname
   const getBreadcrumbs = () => {
@@ -68,11 +78,11 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
       departments: "Departments & Bands",
       payroll: "Payroll & Compensation",
       performance: "Performance & OKRs",
-      reports: "Reports & Analytics",
-      settings: "Settings & Audit",
-      support: "Support & Helpdesk",
-      account: "My Account",
-      billing: "Billing & Plans",
+      reports: "Executive Reports",
+      settings: "System Settings",
+      support: "Support Helpdesk",
+      billing: "Billing & Subscriptions",
+      account: "Account Settings",
       "upgrade-pro": "Upgrade to Pro",
     }
 
@@ -88,43 +98,6 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
   }
 
   const breadcrumbs = getBreadcrumbs()
-
-  const handleGlobalSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!globalSearch.trim()) return
-    const query = globalSearch.toLowerCase()
-    if (
-      query.includes("emp") ||
-      query.includes("alex") ||
-      query.includes("sarah") ||
-      query.includes("staff")
-    ) {
-      navigate(`/employees?search=${encodeURIComponent(globalSearch)}`)
-    } else if (
-      query.includes("attend") ||
-      query.includes("shift") ||
-      query.includes("clock")
-    ) {
-      navigate("/attendance")
-    } else if (
-      query.includes("leave") ||
-      query.includes("vacation") ||
-      query.includes("holiday")
-    ) {
-      navigate("/leaves")
-    } else if (
-      query.includes("pay") ||
-      query.includes("salary") ||
-      query.includes("tax")
-    ) {
-      navigate("/payroll")
-    } else if (query.includes("dept") || query.includes("engineer")) {
-      navigate("/departments")
-    } else {
-      toast.info(`Searching system for "${globalSearch}"...`)
-      navigate(`/reports?query=${encodeURIComponent(globalSearch)}`)
-    }
-  }
 
   const handleLogoutAction = () => {
     if (onLogout) {
@@ -146,11 +119,19 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
             <Separator orientation="vertical" className="mr-2 h-4" />
             <Breadcrumb>
               <BreadcrumbList>
+                {/* Mobile Title */}
+                <BreadcrumbItem className="md:hidden">
+                  <BreadcrumbPage className="font-semibold text-foreground text-xs sm:text-sm truncate max-w-[160px]">
+                    {breadcrumbs[breadcrumbs.length - 1]?.title || "Dashboard"}
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+
+                {/* Desktop Full Breadcrumb Trail */}
                 {breadcrumbs.map((crumb, idx) => {
                   const isLast = idx === breadcrumbs.length - 1
                   return (
                     <React.Fragment key={crumb.href}>
-                      <BreadcrumbItem className="hidden md:block">
+                      <BreadcrumbItem className="hidden md:inline-flex">
                         {isLast ? (
                           <BreadcrumbPage className="font-semibold text-foreground">
                             {crumb.title}
@@ -162,7 +143,7 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
                         )}
                       </BreadcrumbItem>
                       {!isLast && (
-                        <BreadcrumbSeparator className="hidden md:block" />
+                        <BreadcrumbSeparator className="hidden md:inline-flex" />
                       )}
                     </React.Fragment>
                   )
@@ -172,18 +153,30 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
           </div>
 
           {/* Right Header Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Global Search Bar */}
-            <form onSubmit={handleGlobalSearch} className="relative hidden lg:block w-64">
-              <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search anything... (Ctrl+K)"
-                value={globalSearch}
-                onChange={(e) => setGlobalSearch(e.target.value)}
-                className="h-9 w-full rounded-lg bg-muted/40 pl-8 pr-4 text-xs focus:bg-background"
-              />
-            </form>
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Quick Command Palette Trigger */}
+            <button
+              type="button"
+              onClick={() => setCommandOpen(true)}
+              className="relative hidden sm:flex items-center gap-2 h-9 w-44 md:w-56 lg:w-64 rounded-lg border border-input/80 bg-muted/40 px-3 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all cursor-pointer shadow-2xs"
+            >
+              <Search className="size-3.5 shrink-0 opacity-60" />
+              <span className="truncate">Search workforce...</span>
+              <kbd className="pointer-events-none ml-auto hidden lg:inline-flex h-5 select-none items-center gap-0.5 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                <span className="text-[11px]">⌘</span>K
+              </kbd>
+            </button>
+
+            {/* Mobile Search Icon Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCommandOpen(true)}
+              className="sm:hidden size-9 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer"
+              title="Search workforce (Ctrl+K)"
+            >
+              <Search className="size-4" />
+            </Button>
 
             {/* Notification Drawer Menu */}
             <DropdownMenu>
@@ -198,9 +191,10 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
               >
                 <Bell className="size-4" />
                 {pendingLeaves.length + openTickets.length > 0 && (
-                  <span className="absolute right-1.5 top-1.5 flex size-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
-                    <span className="relative inline-flex size-2 rounded-full bg-primary"></span>
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground shadow-xs">
+                    {pendingLeaves.length + openTickets.length > 99
+                      ? "99+"
+                      : pendingLeaves.length + openTickets.length}
                   </span>
                 )}
                 <span className="sr-only">Notifications</span>
@@ -270,30 +264,11 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
 
             {/* Theme Toggle */}
             <ThemeToggle />
-
-            {/* Quick Switch to Employee Portal */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/portal")}
-              className="hidden sm:inline-flex gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 cursor-pointer"
-            >
-              <User className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-              Employee Portal
-            </Button>
-
-            {/* Pro Upgrade Quick Pill */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/upgrade-pro")}
-              className="hidden md:inline-flex gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/5 cursor-pointer"
-            >
-              <Sparkles className="size-3.5 text-primary" />
-              Pro Tier
-            </Button>
           </div>
         </header>
+
+        {/* Global Command Dialog (Ctrl+K) */}
+        <CommandMenu open={commandOpen} onOpenChange={setCommandOpen} />
 
         {/* Main Content View Outlet */}
         <main className="flex-1 overflow-y-auto bg-muted/20 p-4 sm:p-6 lg:p-8">

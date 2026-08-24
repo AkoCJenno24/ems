@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { persist, createJSONStorage } from "zustand/middleware"
 import type {
   CurrentUser,
   UserRole,
@@ -13,6 +14,7 @@ import type {
   EmployeeDocument,
   LeaveBalance,
   PersonalGoal,
+  Announcement,
 } from "./types"
 
 interface EMSStoreState {
@@ -20,6 +22,11 @@ interface EMSStoreState {
   currentUser: CurrentUser
   setCurrentUser: (user: Partial<CurrentUser>) => void
   loginAsRole: (role: UserRole) => void
+  changePassword: (newPassword: string) => void
+
+  // Announcements & Bulletins
+  announcements: Announcement[]
+  addAnnouncement: (ann: Omit<Announcement, "id" | "time">) => void
 
   // Time & Punch Tracking
   isClockedIn: boolean
@@ -542,18 +549,82 @@ const initialAuditLogs: AuditLog[] = [
   },
 ]
 
-export const useEMSStore = create<EMSStoreState>((set, get) => ({
-  currentUser: adminUserPreset,
-  setCurrentUser: (updates) =>
-    set((state) => ({ currentUser: { ...state.currentUser, ...updates } })),
-
-  loginAsRole: (role: UserRole) => {
-    if (role === "Admin") {
-      set({ currentUser: adminUserPreset })
-    } else {
-      set({ currentUser: employeeUserPreset })
-    }
+const initialAnnouncements: Announcement[] = [
+  {
+    id: "ANN-1",
+    title: "Q3 All-Hands Townhall Meeting",
+    content:
+      "Join us this Friday at 3:00 PM EST via Google Meet. Leadership will present financial metrics and product roadmap.",
+    author: "Alex Morgan",
+    time: "2 hours ago",
+    priority: "high",
   },
+  {
+    id: "ANN-2",
+    title: "Office Network Maintenance Window",
+    content:
+      "Infrastructure will be upgrading core switches on Sunday between 02:00 AM - 05:00 AM UTC. Expect brief VPN blips.",
+    author: "Marcus Vance",
+    time: "Yesterday",
+    priority: "normal",
+  },
+]
+
+export const useEMSStore = create<EMSStoreState>()(
+  persist(
+    (set, get) => ({
+      currentUser: adminUserPreset,
+      setCurrentUser: (updates) =>
+        set((state) => ({ currentUser: { ...state.currentUser, ...updates } })),
+
+      loginAsRole: (role: UserRole) => {
+        if (role === "Admin") {
+          set({ currentUser: adminUserPreset })
+        } else {
+          set({ currentUser: employeeUserPreset })
+        }
+      },
+
+      changePassword: (newPassword: string) => {
+        const currentId = get().currentUser.id
+        set((state) => ({
+          currentUser: {
+            ...state.currentUser,
+            password: newPassword,
+            temporaryPassword: undefined,
+            mustChangePassword: false,
+          },
+          employees: state.employees.map((e) =>
+            e.id === currentId
+              ? {
+                  ...e,
+                  password: newPassword,
+                  temporaryPassword: undefined,
+                  mustChangePassword: false,
+                }
+              : e
+          ),
+        }))
+        get().addAuditLog({
+          actor: get().currentUser.name,
+          action: "Security credentials updated (Password changed)",
+          category: "Access & Auth",
+          ip: "192.168.1.1",
+          status: "Success",
+        })
+      },
+
+      announcements: initialAnnouncements,
+      addAnnouncement: (ann) => {
+        const newAnn: Announcement = {
+          id: `ANN-${Date.now()}`,
+          time: "Just now",
+          ...ann,
+        }
+        set((state) => ({
+          announcements: [newAnn, ...state.announcements],
+        }))
+      },
 
   isClockedIn: true,
   clockInTime: "08:55 AM",
@@ -809,4 +880,27 @@ export const useEMSStore = create<EMSStoreState>((set, get) => ({
     set((state) => ({
       settings: { ...state.settings, ...updates },
     })),
-}))
+    }),
+    {
+      name: "ems-enterprise-storage",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        currentUser: state.currentUser,
+        isClockedIn: state.isClockedIn,
+        clockInTime: state.clockInTime,
+        todayWorkMinutes: state.todayWorkMinutes,
+        leaveBalances: state.leaveBalances,
+        employees: state.employees,
+        departments: state.departments,
+        attendanceRecords: state.attendanceRecords,
+        leaveRequests: state.leaveRequests,
+        announcements: state.announcements,
+        expenseClaims: state.expenseClaims,
+        personalGoals: state.personalGoals,
+        tickets: state.tickets,
+        auditLogs: state.auditLogs,
+        settings: state.settings,
+      }),
+    }
+  )
+)

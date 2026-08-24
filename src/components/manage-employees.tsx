@@ -28,6 +28,7 @@ import {
   Archive,
   RotateCcw,
   CheckCircle2,
+  Key,
   X,
   ChevronLeft,
   ChevronRight,
@@ -59,6 +60,9 @@ export interface Employee {
   manager?: string
   salaryBand?: string
   bio?: string
+  temporaryPassword?: string
+  password?: string
+  mustChangePassword?: boolean
 }
 
 export const initialEmployeeList: Employee[] = [
@@ -253,6 +257,7 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
     manager: "",
     salaryBand: "",
     bio: "",
+    temporaryPassword: "EMS-Welcome2026!",
   })
 
   // Pagination
@@ -341,6 +346,7 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
       manager: "Alex Morgan",
       salaryBand: "L3 - Mid-level",
       bio: "",
+      temporaryPassword: "EMS-" + Math.random().toString(36).substring(2, 7).toUpperCase() + "!",
     })
     setShowAddModal(true)
   }
@@ -348,6 +354,8 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name?.trim() || !formData.jobTitle?.trim()) return
+
+    const initialPass = formData.temporaryPassword?.trim() || "EMS-Welcome2026!"
 
     const newEmp = addEmployee({
       name: formData.name.trim(),
@@ -366,10 +374,12 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
       salaryBand: formData.salaryBand?.trim() || "Standard",
       bio: formData.bio?.trim() || "New team member onboarded to the workforce.",
       avatar: `https://images.unsplash.com/photo-${1534528741775 + employees.length}?w=128&h=128&dpr=2&q=80`,
+      temporaryPassword: initialPass,
+      mustChangePassword: true,
     })
 
     toast.success("Employee Profile Created", {
-      description: `${newEmp.name} registered as ${newEmp.jobTitle} (Role: ${newEmp.role}) in ${newEmp.department}.`,
+      description: `${newEmp.name} registered. Temporary password set: ${initialPass}`,
     })
     setShowAddModal(false)
     onCloseAdd?.()
@@ -719,6 +729,38 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => {
+                    const selectedEmps = employees.filter((e) => selectedIds.includes(e.id))
+                    const headers = ["ID", "Name", "Job Title", "App Role", "Department", "Type", "Status", "Email"]
+                    const rows = selectedEmps.map((e) => [
+                      e.id,
+                      `"${e.name}"`,
+                      `"${e.jobTitle || ""}"`,
+                      `"${e.role || "Employee"}"`,
+                      `"${e.department}"`,
+                      e.employmentType,
+                      e.status,
+                      e.email,
+                    ])
+                    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n")
+                    const encodedUri = encodeURI(csvContent)
+                    const link = document.createElement("a")
+                    link.setAttribute("href", encodedUri)
+                    link.setAttribute("download", `EMS_Selected_${selectedIds.length}_Employees.csv`)
+                    document.body.appendChild(link)
+                    link.click()
+                    document.body.removeChild(link)
+                    toast.success("Exported Selected", {
+                      description: `Downloaded CSV with ${selectedIds.length} records.`,
+                    })
+                  }}
+                  className="h-7 text-xs px-2 cursor-pointer"
+                >
+                  <Download className="h-3.5 w-3.5 mr-1" /> Export ({selectedIds.length})
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => handleBulkStatusChange("Active")}
                   className="h-7 text-xs px-2 cursor-pointer"
                 >
@@ -730,7 +772,7 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
                   onClick={() => handleBulkStatusChange("Inactive")}
                   className="h-7 text-xs px-2 cursor-pointer"
                 >
-                  <Archive className="h-3.5 w-3.5 mr-1 text-muted-foreground" /> Archive Selected
+                  <Archive className="h-3.5 w-3.5 mr-1 text-muted-foreground" /> Archive
                 </Button>
                 <Button
                   variant="destructive"
@@ -1179,12 +1221,45 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
                   </div>
                 </div>
 
+                {/* Temporary Access Password */}
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                      <Key className="size-3.5 text-primary" />
+                      Temporary Access Password *
+                    </label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const randomPass = "EMS-" + Math.random().toString(36).substring(2, 7).toUpperCase() + "!"
+                        setFormData({ ...formData, temporaryPassword: randomPass })
+                      }}
+                      className="h-6 text-[10px] text-primary px-2 font-medium cursor-pointer hover:bg-primary/10"
+                    >
+                      Generate Key
+                    </Button>
+                  </div>
+                  <Input
+                    type="text"
+                    placeholder="e.g. EMS-Temp2026!#"
+                    value={formData.temporaryPassword || ""}
+                    onChange={(e) => setFormData({ ...formData, temporaryPassword: e.target.value })}
+                    className="font-mono text-xs bg-background"
+                    required
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    The employee uses this initial password on first sign-in and can change it anytime in their profile security settings.
+                  </p>
+                </div>
+
                 <div>
                   <label className="text-xs font-medium text-muted-foreground block mb-1.5">
                     Professional Bio & Responsibilities
                   </label>
                   <textarea
-                    rows={3}
+                    rows={2}
                     placeholder="Brief description of duties, projects, and specializations..."
                     value={formData.bio || ""}
                     onChange={(e) => setFormData({ ...formData, bio: e.target.value })}

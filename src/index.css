@@ -128,3 +128,24 @@
     @apply font-sans;
     }
 }
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  header, [data-slot="sidebar"], [data-slot="sidebar-trigger"], .no-print, [data-slot="command"] {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    background: transparent !important;
+  }
+  .printable-card {
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: 100% !important;
+    break-inside: avoid;
+  }
+}

@@ -24,11 +24,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { CommandMenu } from "@/components/shared/command-menu"
 import { ThemeToggle } from "@/components/shared/theme-toggle"
 import { useEMSStore } from "@/store/use-ems-store"
 import {
   Bell,
-  Shield,
+  Search,
   CheckCircle2,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -42,7 +43,19 @@ export function EmployeeLayout({ onLogout }: EmployeeLayoutProps) {
   const navigate = useNavigate()
   const currentUser = useEMSStore((state) => state.currentUser)
   const leaveRequests = useEMSStore((state) => state.leaveRequests)
-  const isAdmin = currentUser.role === "Admin"
+  const [commandOpen, setCommandOpen] = React.useState(false)
+
+  // Keyboard shortcut for Cmd+K / Ctrl+K
+  React.useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setCommandOpen((open) => !open)
+      }
+    }
+    document.addEventListener("keydown", down)
+    return () => document.removeEventListener("keydown", down)
+  }, [])
 
   // My personal leaves
   const myLeaves = leaveRequests.filter(
@@ -101,11 +114,19 @@ export function EmployeeLayout({ onLogout }: EmployeeLayoutProps) {
             <Separator orientation="vertical" className="mr-2 h-4" />
             <Breadcrumb>
               <BreadcrumbList>
+                {/* Mobile Title */}
+                <BreadcrumbItem className="md:hidden">
+                  <BreadcrumbPage className="font-semibold text-foreground text-xs sm:text-sm truncate max-w-[160px]">
+                    {breadcrumbs[breadcrumbs.length - 1]?.title || "My Workspace"}
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+
+                {/* Desktop Full Breadcrumb Trail */}
                 {breadcrumbs.map((crumb, idx) => {
                   const isLast = idx === breadcrumbs.length - 1
                   return (
                     <React.Fragment key={crumb.href}>
-                      <BreadcrumbItem className="hidden md:block">
+                      <BreadcrumbItem className="hidden md:inline-flex">
                         {isLast ? (
                           <BreadcrumbPage className="font-semibold text-foreground">
                             {crumb.title}
@@ -117,7 +138,7 @@ export function EmployeeLayout({ onLogout }: EmployeeLayoutProps) {
                         )}
                       </BreadcrumbItem>
                       {!isLast && (
-                        <BreadcrumbSeparator className="hidden md:block" />
+                        <BreadcrumbSeparator className="hidden md:inline-flex" />
                       )}
                     </React.Fragment>
                   )
@@ -127,19 +148,30 @@ export function EmployeeLayout({ onLogout }: EmployeeLayoutProps) {
           </div>
 
           {/* Right Header Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Only show Quick Switch to Admin Console if user has Admin role */}
-            {isAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/")}
-                className="gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/5 cursor-pointer shadow-2xs"
-              >
-                <Shield className="size-3.5 text-primary" />
-                <span className="hidden sm:inline">Admin Console</span>
-              </Button>
-            )}
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Quick Command Palette Trigger */}
+            <button
+              type="button"
+              onClick={() => setCommandOpen(true)}
+              className="relative hidden sm:flex items-center gap-2 h-9 w-44 md:w-56 lg:w-64 rounded-lg border border-input/80 bg-muted/40 px-3 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all cursor-pointer shadow-2xs"
+            >
+              <Search className="size-3.5 shrink-0 opacity-60" />
+              <span className="truncate">Search portal...</span>
+              <kbd className="pointer-events-none ml-auto hidden lg:inline-flex h-5 select-none items-center gap-0.5 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                <span className="text-[11px]">⌘</span>K
+              </kbd>
+            </button>
+
+            {/* Mobile Search Icon Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCommandOpen(true)}
+              className="sm:hidden size-9 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer"
+              title="Search portal (Ctrl+K)"
+            >
+              <Search className="size-4" />
+            </Button>
 
             {/* Notification Drawer */}
             <DropdownMenu>
@@ -154,8 +186,8 @@ export function EmployeeLayout({ onLogout }: EmployeeLayoutProps) {
               >
                 <Bell className="size-4" />
                 {myLeaves.length > 0 && (
-                  <span className="absolute right-1.5 top-1.5 flex size-2">
-                    <span className="relative inline-flex size-2 rounded-full bg-emerald-500"></span>
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white shadow-xs">
+                    {myLeaves.length > 99 ? "99+" : myLeaves.length}
                   </span>
                 )}
                 <span className="sr-only">Notifications</span>
@@ -202,6 +234,9 @@ export function EmployeeLayout({ onLogout }: EmployeeLayoutProps) {
             <ThemeToggle />
           </div>
         </header>
+
+        {/* Global Command Dialog (Ctrl+K) */}
+        <CommandMenu open={commandOpen} onOpenChange={setCommandOpen} />
 
         {/* Main Content View */}
         <main className="flex-1 overflow-y-auto bg-muted/20 p-4 sm:p-6 lg:p-8">

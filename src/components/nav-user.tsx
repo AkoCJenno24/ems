@@ -21,7 +21,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { Badge } from "@/components/ui/badge"
-import { ChevronsUpDownIcon, SparklesIcon, BadgeCheckIcon, CreditCardIcon, LogOutIcon, Shield } from "lucide-react"
+import { ChevronsUpDownIcon, SparklesIcon, BadgeCheckIcon, CreditCardIcon, LogOutIcon } from "lucide-react"
 import { useEMSStore } from "@/store/use-ems-store"
 
 export function NavUser({
@@ -78,15 +78,10 @@ export function NavUser({
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight min-w-0">
-                    <span className="truncate font-semibold">{user.name}</span>
-                    <span className="truncate text-xs text-muted-foreground">{user.email}</span>
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      <Badge variant="outline" className="w-fit text-[10px] font-normal truncate max-w-[120px]">
+                    <span className="truncate font-semibold text-foreground">{user.name}</span>
+                    <div className="mt-1">
+                      <Badge variant="outline" className="w-fit text-[10px] font-normal truncate max-w-[190px]">
                         {currentUser.jobTitle || currentUser.title}
-                      </Badge>
-                      <Badge variant="secondary" className="w-fit text-[10px] gap-1">
-                        <Shield className="size-2.5" />
-                        {currentUser.role}
                       </Badge>
                     </div>
                   </div>

@@ -20,6 +20,7 @@ import {
   CreditCard,
   Plus,
   X,
+  Printer,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -174,7 +175,7 @@ export function EmployeePayslipsPage() {
           </div>
 
           {/* Payslip Digital Ledger Card */}
-          <Card className="border-border/80">
+          <Card className="border-border/80 printable-card">
             <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border/60 pb-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -190,7 +191,7 @@ export function EmployeePayslipsPage() {
                 </CardDescription>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 no-print">
                 <select
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
@@ -205,11 +206,21 @@ export function EmployeePayslipsPage() {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => window.print()}
+                  className="gap-1.5 text-xs font-semibold cursor-pointer"
+                >
+                  <Printer className="size-3.5" />
+                  Print
+                </Button>
+
+                <Button
+                  variant="default"
+                  size="sm"
                   onClick={handleDownloadPayslip}
-                  className="gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/5 cursor-pointer"
+                  className="gap-1.5 text-xs font-semibold cursor-pointer"
                 >
                   <Download className="size-3.5" />
-                  PDF Payslip
+                  PDF
                 </Button>
               </div>
             </CardHeader>

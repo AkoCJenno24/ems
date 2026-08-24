@@ -24,16 +24,26 @@ import {
   Shield,
   Edit2,
   Save,
+  Lock,
+  Key,
+  CheckCircle2,
+  X,
 } from "lucide-react"
 import { toast } from "sonner"
 
 export function EmployeeProfilePage() {
-  const { currentUser, employeeDocuments, setCurrentUser } = useEMSStore()
+  const { currentUser, employeeDocuments, setCurrentUser, changePassword } = useEMSStore()
   const [isEditing, setIsEditing] = useState(false)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [profileForm, setProfileForm] = useState({
     phone: currentUser.phone,
     location: currentUser.location,
     emergencyContact: "Emily Morgan (+1 555-987-6543) - Spouse",
+  })
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   })
 
   const handleSaveProfile = (e: React.FormEvent) => {
@@ -45,6 +55,29 @@ export function EmployeeProfilePage() {
     setIsEditing(false)
     toast.success("Profile Information Updated", {
       description: "Your contact details have been refreshed across the company registry.",
+    })
+  }
+
+  const handleChangePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!passwordForm.newPassword || passwordForm.newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters.")
+      return
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error("New passwords do not match. Please verify.")
+      return
+    }
+
+    changePassword(passwordForm.newPassword)
+    toast.success("Password Changed Successfully", {
+      description: "Your new permanent password is active for future sign-ins.",
+    })
+    setShowPasswordModal(false)
+    setPasswordForm({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
     })
   }
 
@@ -72,7 +105,7 @@ export function EmployeeProfilePage() {
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {currentUser.title} • {currentUser.department}
+                  {currentUser.jobTitle || currentUser.title} • {currentUser.department}
                 </p>
               </div>
             </div>
@@ -294,8 +327,128 @@ export function EmployeeProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Account Security & Password Card */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <Lock className="size-4 text-amber-500" />
+                Account Security & Password
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-xs">
+              <div className="rounded-xl border border-border/70 p-3.5 bg-muted/20 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Access Password:</span>
+                  <Badge variant="outline" className="text-[10px] text-emerald-600 dark:text-emerald-400 border-emerald-500/20 bg-emerald-500/10">
+                    Active & Encrypted
+                  </Badge>
+                </div>
+                <p className="text-muted-foreground leading-relaxed">
+                  Update your initial or temporary login password to a personal password.
+                </p>
+                <Button
+                  onClick={() => setShowPasswordModal(true)}
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-1.5 text-xs font-semibold cursor-pointer"
+                >
+                  <Key className="size-3.5 text-primary" />
+                  Change My Password
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <Card className="w-full max-w-md shadow-2xl border-border animate-in zoom-in-95">
+            <CardHeader className="border-b pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Lock className="size-4 text-primary" />
+                  Update Account Password
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowPasswordModal(false)}
+                  className="h-7 w-7 rounded-full cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <CardDescription className="text-xs">
+                Set a secure permanent password for your employee account
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="p-5">
+              <form onSubmit={handleChangePasswordSubmit} className="space-y-3.5 text-xs">
+                <div className="space-y-1.5">
+                  <Label htmlFor="curr-pass" className="text-xs">Current / Temporary Password</Label>
+                  <Input
+                    id="curr-pass"
+                    type="password"
+                    placeholder="Enter current or temporary key"
+                    value={passwordForm.currentPassword}
+                    onChange={(e) =>
+                      setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-pass" className="text-xs">New Password (Min. 6 chars) *</Label>
+                  <Input
+                    id="new-pass"
+                    type="password"
+                    placeholder="Enter new permanent password"
+                    value={passwordForm.newPassword}
+                    onChange={(e) =>
+                      setPasswordForm({ ...passwordForm, newPassword: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirm-pass" className="text-xs">Confirm New Password *</Label>
+                  <Input
+                    id="confirm-pass"
+                    type="password"
+                    placeholder="Re-type new password"
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) =>
+                      setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="pt-2 flex justify-end gap-2 border-t mt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPasswordModal(false)}
+                    className="cursor-pointer"
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" size="sm" className="gap-1.5 cursor-pointer">
+                    <CheckCircle2 className="size-3.5" />
+                    Save New Password
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

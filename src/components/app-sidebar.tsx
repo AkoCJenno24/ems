@@ -51,9 +51,9 @@ export function AppSidebar({ user, activeNav, onSelectNav, onLogout, ...props }:
   const openTickets = tickets.filter((t) => t.status !== "Resolved")
 
   const currentUser = user || {
-    name: currentUserFromStore.name,
-    email: currentUserFromStore.email,
-    avatar: currentUserFromStore.avatar,
+    name: currentUserFromStore?.name || "Administrator",
+    email: currentUserFromStore?.email || "admin@ems.com",
+    avatar: currentUserFromStore?.avatar || "",
   }
 
   const handleSelectNav = (title: string, url?: string) => {

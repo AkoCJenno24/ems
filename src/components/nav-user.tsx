@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/sidebar"
 import { Badge } from "@/components/ui/badge"
 import { ChevronsUpDownIcon, SparklesIcon, BadgeCheckIcon, CreditCardIcon, LogOutIcon } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
 import { useEMSStore } from "@/store/use-ems-store"
 
 export function NavUser({
@@ -38,8 +40,28 @@ export function NavUser({
   onSelectNav?: (navTitle: string) => void
 }) {
   const { isMobile } = useSidebar()
+  const navigate = useNavigate()
   const currentUser = useEMSStore((state) => state.currentUser)
-  const isAdmin = currentUser.role === "Admin"
+  const logout = useEMSStore((state) => state.logout)
+  const isAdmin = currentUser?.role === "Admin"
+  const safeName = user?.name || currentUser?.name || "User"
+  const safeEmail = user?.email || currentUser?.email || "user@ems.com"
+  const safeAvatar = user?.avatar || currentUser?.avatar || ""
+
+  const handleLogout = async () => {
+    try {
+      if (onLogout) {
+        onLogout()
+      } else {
+        await logout()
+        toast.success("Logged out successfully")
+        navigate("/login", { replace: true })
+      }
+    } catch {
+      await logout()
+      navigate("/login", { replace: true })
+    }
+  }
 
   return (
     <SidebarMenu>
@@ -51,14 +73,14 @@ export function NavUser({
             }
           >
             <Avatar>
-              <AvatarImage src={user.avatar} alt={user.name} />
+              <AvatarImage src={safeAvatar} alt={safeName} />
               <AvatarFallback>
-                {user.name.slice(0, 2).toUpperCase()}
+                {safeName.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">{user.name}</span>
-              <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+              <span className="truncate font-medium">{safeName}</span>
+              <span className="truncate text-xs text-muted-foreground">{safeEmail}</span>
             </div>
             <ChevronsUpDownIcon className="ml-auto size-4" />
           </DropdownMenuTrigger>
@@ -72,16 +94,16 @@ export function NavUser({
               <DropdownMenuLabel className="p-0 font-normal">
                 <div className="flex items-center gap-2.5 px-2 py-2 text-left text-sm">
                   <Avatar className="size-9 border border-border">
-                    <AvatarImage src={user.avatar} alt={user.name} />
+                    <AvatarImage src={safeAvatar} alt={safeName} />
                     <AvatarFallback>
-                      {user.name.slice(0, 2).toUpperCase()}
+                      {safeName.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight min-w-0">
-                    <span className="truncate font-semibold text-foreground">{user.name}</span>
+                    <span className="truncate font-semibold text-foreground">{safeName}</span>
                     <div className="mt-1">
                       <Badge variant="outline" className="w-fit text-[10px] font-normal truncate max-w-[190px]">
-                        {currentUser.jobTitle || currentUser.title}
+                        {currentUser?.jobTitle || currentUser?.title || "Employee"}
                       </Badge>
                     </div>
                   </div>
@@ -124,7 +146,7 @@ export function NavUser({
               )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-destructive focus:text-destructive">
+            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
               <LogOutIcon className="size-4" />
               Log out
             </DropdownMenuItem>

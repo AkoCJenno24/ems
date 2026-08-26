@@ -38,10 +38,12 @@ export function EmployeeSidebar({ onLogout, ...props }: EmployeeSidebarProps) {
   const location = useLocation()
   const currentUser = useEMSStore((state) => state.currentUser)
   const leaveRequests = useEMSStore((state) => state.leaveRequests)
-  const isAdmin = currentUser.role === "Admin"
+  const isAdmin = currentUser?.role === "Admin"
 
   const myLeaves = leaveRequests.filter(
-    (l) => l.employeeName === currentUser.name || l.employeeId === currentUser.id
+    (l) =>
+      (currentUser?.name && l.employeeName === currentUser.name) ||
+      (currentUser?.id && l.employeeId === currentUser.id)
   )
   const myPendingLeaves = myLeaves.filter((l) => l.status === "Pending")
 
@@ -170,9 +172,9 @@ export function EmployeeSidebar({ onLogout, ...props }: EmployeeSidebarProps) {
       <SidebarFooter>
         <NavUser
           user={{
-            name: currentUser.name,
-            email: currentUser.email,
-            avatar: currentUser.avatar,
+            name: currentUser?.name || "Employee",
+            email: currentUser?.email || "employee@ems.com",
+            avatar: currentUser?.avatar || "",
           }}
           onLogout={onLogout}
           onSelectNav={(title) => {

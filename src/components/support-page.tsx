@@ -81,148 +81,7 @@ export interface KnowledgeArticle {
   content: string
 }
 
-const initialTickets: SupportTicketItem[] = [
-  {
-    id: "TKT-8921",
-    subject: "NACHA Direct Deposit ACH Batch Export Formatting Issue",
-    category: "Payroll & Compliance",
-    priority: "Critical / Urgent",
-    status: "In Progress",
-    createdAt: "Aug 22, 2026, 09:14 AM",
-    updatedAt: "15 mins ago",
-    assignee: {
-      name: "Marcus Vance",
-      role: "Senior Fintech Support",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&h=128&dpr=2&q=80",
-    },
-    requesterEmail: "admin@ems.company",
-    messagesCount: 3,
-    affectedModule: "Payroll & Disbursements",
-    description: "When downloading the August 2026 ACH payment file, routing number headers on bank batch #ACH-8849 need custom 940 padding for Chase Bank gateway integration.",
-    conversationHistory: [
-      {
-        id: "msg-1",
-        sender: "Enterprise Admin",
-        senderRole: "Customer",
-        timestamp: "Aug 22, 09:14 AM",
-        message: "We generated the monthly payroll direct deposit file, but our bank processing portal flagged line 1 padding format. Need validation on NACHA standard compliance.",
-      },
-      {
-        id: "msg-2",
-        sender: "System",
-        senderRole: "System",
-        timestamp: "Aug 22, 09:15 AM",
-        message: "Automated Ticket Dispatch: Priority escalated to Tier-3 Fintech Operations under Enterprise SLA guarantee.",
-      },
-      {
-        id: "msg-3",
-        sender: "Marcus Vance",
-        senderRole: "Support Engineer",
-        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&h=128&dpr=2&q=80",
-        timestamp: "Aug 22, 09:28 AM",
-        message: "Hello! I am reviewing the ACH batch export script. We have applied custom padded header options for Chase and Wells Fargo gateways in v8.2. You can download the refreshed batch directly.",
-      },
-    ],
-  },
-  {
-    id: "TKT-8840",
-    subject: "SAML 2.0 Okta Single Sign-On Certificate Rotation",
-    category: "Security & SSO",
-    priority: "High",
-    status: "Waiting on Customer",
-    createdAt: "Aug 21, 2026, 02:40 PM",
-    updatedAt: "2 hours ago",
-    assignee: {
-      name: "Sophia Martinez",
-      role: "Identity & Security Specialist",
-      avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=128&h=128&dpr=2&q=80",
-    },
-    requesterEmail: "admin@ems.company",
-    messagesCount: 4,
-    affectedModule: "Settings & Security",
-    description: "Our corporate Okta identity provider x509 encryption certificate expires next week. Need assistance verifying zero-downtime certificate rotation in tenant settings.",
-    conversationHistory: [
-      {
-        id: "msg-1",
-        sender: "Enterprise Admin",
-        senderRole: "Customer",
-        timestamp: "Aug 21, 02:40 PM",
-        message: "Need to upload our newly generated Okta IdP certificate without disrupting 248 active SSO employee sessions.",
-      },
-      {
-        id: "msg-2",
-        sender: "Sophia Martinez",
-        senderRole: "Support Engineer",
-        avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=128&h=128&dpr=2&q=80",
-        timestamp: "Aug 21, 03:10 PM",
-        message: "Hi! You can provide both primary and secondary x509 certs simultaneously in Settings > Security > SSO. Once uploaded, Okta can seamlessly roll over without user logout.",
-      },
-    ],
-  },
-  {
-    id: "TKT-8795",
-    subject: "Add Custom Columns to Department Salary Band Exports",
-    category: "Feature Request",
-    priority: "Low",
-    status: "Open",
-    createdAt: "Aug 19, 2026, 11:20 AM",
-    updatedAt: "1 day ago",
-    assignee: {
-      name: "Alex Morgan",
-      role: "Product Operations Lead",
-      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=128&h=128&dpr=2&q=80",
-    },
-    requesterEmail: "admin@ems.company",
-    messagesCount: 2,
-    affectedModule: "Departments & Pay Bands",
-    description: "Requesting ability to include regional cost-of-living multiplier columns when generating custom organization CSV benchmarks.",
-    conversationHistory: [
-      {
-        id: "msg-1",
-        sender: "Enterprise Admin",
-        senderRole: "Customer",
-        timestamp: "Aug 19, 11:20 AM",
-        message: "Would love to see regional compensation tiers (US-West, EU-Central, APAC) broken out automatically in the salary export view.",
-      },
-    ],
-  },
-  {
-    id: "TKT-8610",
-    subject: "Annual Sick Leave Carry-Over Cap Policy Verification",
-    category: "General Inquiry",
-    priority: "Medium",
-    status: "Resolved",
-    createdAt: "Aug 14, 2026, 04:15 PM",
-    updatedAt: "Aug 15, 2026",
-    assignee: {
-      name: "Elena Rostova",
-      role: "HR Policy Advisory",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&dpr=2&q=80",
-    },
-    requesterEmail: "admin@ems.company",
-    messagesCount: 3,
-    affectedModule: "Leave Management",
-    description: "Clarification on whether rolling carry-over caps expire automatically on Dec 31 or if a custom fiscal cut-off date can be scheduled.",
-    resolutionNotes: "Resolved: Guided admin through Leave Management > Policy Engine > Carry-over Limit expiry triggers.",
-    conversationHistory: [
-      {
-        id: "msg-1",
-        sender: "Enterprise Admin",
-        senderRole: "Customer",
-        timestamp: "Aug 14, 04:15 PM",
-        message: "Can we set carry-over leave expiry to March 31 instead of December 31 for our fiscal calendar?",
-      },
-      {
-        id: "msg-2",
-        sender: "Elena Rostova",
-        senderRole: "Support Engineer",
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&dpr=2&q=80",
-        timestamp: "Aug 14, 05:00 PM",
-        message: "Yes! In Leave Management > Policy Engine > Sick Leave, select 'Fiscal Year Cut-off' and input March 31. Accruals will persist through Q1.",
-      },
-    ],
-  },
-]
+// Knowledge Base Data
 
 const initialArticles: KnowledgeArticle[] = [
   {
@@ -283,15 +142,47 @@ interface SupportPageProps {
   userEmail?: string
 }
 
+import { useEMSStore } from "@/store/use-ems-store"
+
 export function SupportPage({
   initialSubTab = "tickets",
   onTabChange,
-  userEmail = "admin@ems.company",
+  userEmail = "admin@ems.com",
 }: SupportPageProps) {
   const [currentTab, setCurrentTab] = useState<SupportTab>(initialSubTab)
+  const storeTickets = useEMSStore((state) => state.tickets)
+  const submitStoreTicket = useEMSStore((state) => state.submitTicket)
 
   // Ticket States
-  const [tickets, setTickets] = useState<SupportTicketItem[]>(initialTickets)
+  const tickets: SupportTicketItem[] = useMemo(() => {
+    return storeTickets.map((t) => ({
+      id: t.id,
+      subject: t.title,
+      category: (t.category as any) || "General Inquiry",
+      priority: (t.priority as any) || "Medium",
+      status: t.status === "In Review" ? "In Progress" : t.status === "Resolved" ? "Resolved" : "Open",
+      createdAt: t.submittedAt,
+      updatedAt: t.submittedAt,
+      assignee: {
+        name: t.assignee || "IT Helpdesk",
+        role: "Support Engineer",
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&h=128&dpr=2&q=80",
+      },
+      requesterEmail: userEmail || "admin@ems.com",
+      messagesCount: t.responses || 1,
+      affectedModule: t.department || "Dashboard & General",
+      description: t.description,
+      conversationHistory: [
+        {
+          id: `msg-${t.id}`,
+          sender: t.submittedBy || "Employee",
+          senderRole: "Customer",
+          timestamp: t.submittedAt,
+          message: t.description || t.title,
+        },
+      ],
+    }))
+  }, [storeTickets, userEmail])
   const [ticketSearch, setTicketSearch] = useState("")
   const [ticketStatusFilter, setTicketStatusFilter] = useState("All")
   const [ticketPriorityFilter, setTicketPriorityFilter] = useState("All")
@@ -313,12 +204,11 @@ export function SupportPage({
   const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null)
   const [helpfulArticles, setHelpfulArticles] = useState<string[]>([])
 
-  // Sync internal sub-tab state when parent initialSubTab changes
-  React.useEffect(() => {
-    if (initialSubTab) {
-      setCurrentTab(initialSubTab)
-    }
-  }, [initialSubTab])
+  const [prevInitialSubTab, setPrevInitialSubTab] = useState(initialSubTab)
+  if (initialSubTab !== prevInitialSubTab) {
+    setPrevInitialSubTab(initialSubTab)
+    setCurrentTab(initialSubTab)
+  }
 
   const handleTabSelect = (tab: SupportTab) => {
     setCurrentTab(tab)
@@ -375,39 +265,16 @@ export function SupportPage({
     setIsSubmittingTicket(true)
 
     setTimeout(() => {
-      const newTicketId = `TKT-${Math.floor(8900 + Math.random() * 1000)}`
-      const newTicket: SupportTicketItem = {
-        id: newTicketId,
-        subject: formSubject.trim(),
-        category: formCategory,
-        priority: formPriority,
-        status: "Open",
-        createdAt: "Just now",
-        updatedAt: "Just now",
-        assignee: {
-          name: "SaaS Concierge Pool",
-          role: "Enterprise Support Queue",
-          avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=128&h=128&dpr=2&q=80",
-        },
-        requesterEmail: userEmail,
-        messagesCount: 1,
-        affectedModule: formModule,
+      submitStoreTicket({
+        title: formSubject.trim(),
+        category: (formCategory === "Technical Issue" ? "IT & Hardware" : formCategory === "Payroll & Compliance" ? "Payroll & Compensation" : "Workplace & Facilities") as any,
+        priority: (formPriority === "Critical / Urgent" ? "Urgent" : formPriority) as any,
+        department: formModule,
         description: formDescription.trim(),
-        conversationHistory: [
-          {
-            id: `msg-${Date.now()}`,
-            sender: "Enterprise Admin",
-            senderRole: "Customer",
-            timestamp: "Just now",
-            message: formDescription.trim(),
-          },
-        ],
-      }
-
-      setTickets([newTicket, ...tickets])
+      })
       setIsSubmittingTicket(false)
       toast.success("Support Ticket Created", {
-        description: `Ticket ${newTicketId} dispatched. Enterprise SLA response within 1 hour.`,
+        description: `Dispatched to Enterprise Support queue.`,
       })
 
       // Reset form and jump to tickets list
@@ -415,7 +282,7 @@ export function SupportPage({
       setFormDescription("")
       setFormAttachments([])
       handleTabSelect("tickets")
-    }, 900)
+    }, 400)
   }
 
   const handleSendReply = (e: React.FormEvent) => {
@@ -437,9 +304,6 @@ export function SupportPage({
       conversationHistory: [...selectedTicketForDetail.conversationHistory, newReply],
     }
 
-    setTickets((prev) =>
-      prev.map((t) => (t.id === selectedTicketForDetail.id ? updated : t))
-    )
     setSelectedTicketForDetail(updated)
     setNewReplyMessage("")
     toast.success("Reply Sent", {

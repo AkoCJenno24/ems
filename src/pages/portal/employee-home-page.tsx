@@ -17,8 +17,6 @@ import {
   Target,
   LifeBuoy,
   Calendar,
-  CheckCircle2,
-  AlertCircle,
   FileText,
   Sparkles,
   ArrowRight,
@@ -38,9 +36,10 @@ export function EmployeeHomePage() {
 
   // Filter personal leaves
   const myLeaves = leaveRequests.filter(
-    (l) => l.employeeName === currentUser.name || l.employeeId === currentUser.id
+    (l) =>
+      (currentUser?.name && l.employeeName === currentUser.name) ||
+      (currentUser?.id && l.employeeId === currentUser.id)
   )
-  const pendingLeaves = myLeaves.filter((l) => l.status === "Pending")
 
   const upcomingHolidays = [
     { name: "Labor Day", date: "Sep 07, 2026", daysAway: "15 days away", type: "Public Holiday" },
@@ -65,12 +64,14 @@ export function EmployeeHomePage() {
     },
     {
       id: "T-3",
-      title: "Review team sprint goals on Kafka migration",
+      title: "Review team sprint goals on platform migration",
       due: "Ongoing",
       urgent: false,
       url: "/portal/performance",
     },
   ]
+
+  const displayName = currentUser?.name ? currentUser.name.split(" ")[0] : "Team Member"
 
   return (
     <div className="space-y-6">
@@ -78,10 +79,10 @@ export function EmployeeHomePage() {
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Hello, {currentUser.name.split(" ")[0]} 👋
+            Hello, {displayName} 👋
           </h1>
           <p className="text-sm text-muted-foreground">
-            {currentUser.jobTitle || currentUser.title} • {currentUser.department} Department
+            {currentUser?.jobTitle || currentUser?.title || "Employee"} • {currentUser?.department || "General"} Department
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -118,7 +119,7 @@ export function EmployeeHomePage() {
             onClick={() => navigate("/portal/leaves")}
             className="gap-1 text-xs text-primary cursor-pointer"
           >
-            Leave History & Request
+            View Leave History
             <ArrowRight className="size-3.5" />
           </Button>
         </div>
@@ -127,75 +128,129 @@ export function EmployeeHomePage() {
             title="Annual Paid Leave"
             totalDays={leaveBalances.annualLeave.total}
             usedDays={leaveBalances.annualLeave.used}
-            color="bg-blue-500"
-            icon={<Calendar className="size-4 text-blue-500" />}
-            onClick={() => navigate("/portal/leaves")}
+            color="primary"
           />
           <LeaveBalanceCard
-            title="Sick & Medical Leave"
+            title="Medical / Sick Leave"
             totalDays={leaveBalances.sickLeave.total}
             usedDays={leaveBalances.sickLeave.used}
-            color="bg-emerald-500"
-            icon={<AlertCircle className="size-4 text-emerald-500" />}
-            onClick={() => navigate("/portal/leaves")}
+            color="emerald"
           />
           <LeaveBalanceCard
             title="Casual & Emergency"
             totalDays={leaveBalances.casualLeave.total}
             usedDays={leaveBalances.casualLeave.used}
-            color="bg-amber-500"
-            icon={<Sparkles className="size-4 text-amber-500" />}
-            onClick={() => navigate("/portal/leaves")}
+            color="purple"
           />
         </div>
       </div>
 
-      {/* Split Grid: Action Items & Performance + Holidays */}
+      {/* Main Grid: 2 Cols Left + 1 Col Right */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left 2 Cols: My Goals & Upcoming Action Items */}
+        {/* Left 2 Cols */}
         <div className="space-y-6 lg:col-span-2">
-          {/* Action Required Items */}
+          {/* Active Leave Requests / Requests Status */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div className="space-y-1">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <CalendarOff className="size-4 text-primary" />
+                  My Leave Requests Status
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Track your pending and past submitted time-off
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/portal/leaves?action=request")}
+                className="gap-1 text-xs text-primary cursor-pointer"
+              >
+                + New Request
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {myLeaves.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <div className="rounded-full bg-primary/10 p-3 text-primary mb-2">
+                    <Calendar className="size-5" />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">
+                    No active leave requests
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5 max-w-sm">
+                    You currently have no pending or scheduled time off. Click "Request Time Off" above to apply.
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border/60">
+                  {myLeaves.slice(0, 3).map((leave) => (
+                    <div
+                      key={leave.id}
+                      className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between text-xs"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-foreground">
+                            {leave.leaveType}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${
+                              leave.status === "Approved"
+                                ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/10 dark:text-emerald-400"
+                                : leave.status === "Rejected"
+                                ? "border-rose-500/30 text-rose-600 bg-rose-500/10 dark:text-rose-400"
+                                : "border-amber-500/30 text-amber-600 bg-amber-500/10 dark:text-amber-400"
+                            }`}
+                          >
+                            {leave.status}
+                          </Badge>
+                        </div>
+                        <p className="text-muted-foreground">
+                          {leave.startDate} to {leave.endDate} • {leave.days} working {leave.days === 1 ? "day" : "days"}
+                        </p>
+                        <p className="italic text-muted-foreground line-clamp-1">
+                          "{leave.reason}"
+                        </p>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground self-start sm:self-center">
+                        Applied: {leave.appliedOn}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Action Items / Self-Service Tasks */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <CheckCircle2 className="size-4 text-primary" />
-                Action Items & Notifications
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Sparkles className="size-4 text-amber-500" />
+                  My Action Queue & Tasks
+                </CardTitle>
+                <Badge variant="outline" className="text-[10px]">
+                  {upcomingTasks.length} Pending
+                </Badge>
+              </div>
               <CardDescription className="text-xs">
-                Pending tasks and approvals needing your attention
+                Items requiring your review, signature, or submission
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="divide-y divide-border/60">
-                {pendingLeaves.length > 0 && (
-                  <div className="flex items-center justify-between py-3">
-                    <div className="flex items-start gap-3">
-                      <div className="size-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                        <CalendarOff className="size-4" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-semibold text-foreground">
-                          Leave Request Awaiting Manager Approval
-                        </h4>
-                        <p className="text-xs text-muted-foreground">
-                          {pendingLeaves[0].leaveType} ({pendingLeaves[0].days} days) - Applied on {pendingLeaves[0].appliedOn}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="text-amber-600 border-amber-500/30 bg-amber-500/10 text-xs">
-                      Under Review
-                    </Badge>
-                  </div>
-                )}
-
                 {upcomingTasks.map((task) => (
                   <div
                     key={task.id}
                     className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <div className="space-y-0.5">
+                    <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-semibold text-foreground">
+                        <h4 className="text-xs font-semibold text-foreground">
                           {task.title}
                         </h4>
                         {task.urgent && (
@@ -243,35 +298,41 @@ export function EmployeeHomePage() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              {personalGoals.map((goal) => (
-                <div key={goal.id} className="space-y-2 rounded-xl border border-border/70 p-3.5 bg-muted/20">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[10px]">
-                          {goal.category}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">Due: {goal.dueDate}</span>
-                      </div>
-                      <h4 className="text-sm font-semibold text-foreground">
-                        {goal.title}
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        {goal.targetMetric}
-                      </p>
-                    </div>
-                    <span className="text-sm font-bold text-primary">
-                      {goal.currentProgress}%
-                    </span>
-                  </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all duration-500"
-                      style={{ width: `${goal.currentProgress}%` }}
-                    />
-                  </div>
+              {personalGoals.length === 0 ? (
+                <div className="py-4 text-center text-xs text-muted-foreground">
+                  No personal OKRs configured yet. Visit the Performance tab to set your quarterly objectives.
                 </div>
-              ))}
+              ) : (
+                personalGoals.map((goal) => (
+                  <div key={goal.id} className="space-y-2 rounded-xl border border-border/70 p-3.5 bg-muted/20">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-[10px]">
+                            {goal.category}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">Due: {goal.dueDate}</span>
+                        </div>
+                        <h4 className="text-sm font-semibold text-foreground">
+                          {goal.title}
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          {goal.targetMetric}
+                        </p>
+                      </div>
+                      <span className="text-sm font-bold text-primary">
+                        {goal.currentProgress}%
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all duration-500"
+                        style={{ width: `${goal.currentProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
         </div>

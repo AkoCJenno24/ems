@@ -98,13 +98,20 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
   }
 
   const breadcrumbs = getBreadcrumbs()
+  const logout = useEMSStore((state) => state.logout)
 
-  const handleLogoutAction = () => {
-    if (onLogout) {
-      onLogout()
-    } else {
-      toast.success("Logged out successfully")
-      navigate("/login")
+  const handleLogoutAction = async () => {
+    try {
+      if (onLogout) {
+        onLogout()
+      } else {
+        await logout()
+        toast.success("Logged out successfully")
+        navigate("/login", { replace: true })
+      }
+    } catch {
+      await logout()
+      navigate("/login", { replace: true })
     }
   }
 

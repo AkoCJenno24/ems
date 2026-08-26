@@ -1,5 +1,32 @@
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
+import {
+  supabaseSignOut,
+  supabaseGetSession,
+  fetchCurrentProfile,
+  fetchSupabaseEmployees,
+  fetchSupabaseDepartments,
+  fetchSupabaseAttendance,
+  fetchSupabaseLeaves,
+  fetchSupabaseAnnouncements,
+  fetchSupabaseTickets,
+  fetchSupabaseLeaveBalances,
+  fetchSupabasePersonalGoals,
+  fetchSupabaseAuditLogs,
+  createSupabaseDepartment,
+  updateSupabaseDepartment,
+  deleteSupabaseDepartment,
+  updateSupabaseProfile,
+  deleteSupabaseProfile,
+  createSupabaseAttendanceRecord,
+  createSupabaseLeaveRequest,
+  updateSupabaseLeaveStatus,
+  createSupabaseAnnouncement,
+  createSupabaseTicket,
+  updateSupabaseTicketStatus,
+  createSupabaseAuditLog,
+} from "@/lib/supabase-service"
 import type {
   CurrentUser,
   UserRole,
@@ -18,6 +45,15 @@ import type {
 } from "./types"
 
 interface EMSStoreState {
+  // Authentication & Session
+  isAuthenticated: boolean
+  isLoadingAuth: boolean
+  setIsAuthenticated: (val: boolean) => void
+  setIsLoadingAuth: (val: boolean) => void
+  initializeAuth: () => Promise<void>
+  logout: () => Promise<void>
+  syncFromSupabase: () => Promise<void>
+
   // Current logged in user & role
   currentUser: CurrentUser
   setCurrentUser: (user: Partial<CurrentUser>) => void
@@ -75,7 +111,16 @@ interface EMSStoreState {
 
   // Support Tickets
   tickets: SupportTicket[]
-  submitTicket: (ticket: Omit<SupportTicket, "id" | "submittedAt" | "responses">) => void
+  submitTicket: (ticket: {
+    title: string
+    category: SupportTicket["category"]
+    priority: SupportTicket["priority"]
+    department?: string
+    description: string
+    status?: SupportTicket["status"]
+    submittedBy?: string
+    assignee?: string
+  }) => void
   updateTicketStatus: (id: string, status: SupportTicket["status"]) => void
 
   // Audit Logs
@@ -87,502 +132,165 @@ interface EMSStoreState {
   updateSettings: (updates: Partial<SystemSettings>) => void
 }
 
-const adminUserPreset: CurrentUser = {
-  id: "EMP-001",
-  name: "Alex Morgan",
-  email: "admin@ems.company",
+const defaultCurrentUser: CurrentUser = {
+  id: "USR-001",
+  name: "User",
+  email: "user@ems.com",
   avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=128&h=128&dpr=2&q=80",
-  role: "Admin",
-  jobTitle: "Head of Operations & Engineering",
-  title: "Head of Operations & Engineering",
-  department: "Engineering",
-  phone: "+1 (555) 234-5678",
-  location: "San Francisco, CA (HQ)",
-  joinedDate: "Jan 15, 2023",
-  salaryBand: "L7 - Executive",
-  manager: "Executive Board",
-  userRole: "Admin",
-}
-
-const employeeUserPreset: CurrentUser = {
-  id: "EMP-002",
-  name: "Sarah Chen",
-  email: "employee@ems.company",
-  avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&dpr=2&q=80",
   role: "Employee",
-  jobTitle: "Lead Product Designer",
-  title: "Lead Product Designer",
-  department: "Product",
-  phone: "+1 (555) 345-6789",
-  location: "New York, NY",
-  joinedDate: "Mar 02, 2023",
-  salaryBand: "L5 - Lead",
-  manager: "Emily Watson",
   userRole: "Employee",
+  jobTitle: "Team Member",
+  title: "Team Member",
+  department: "General",
+  phone: "",
+  location: "Headquarters",
+  joinedDate: "2026-01-01",
+  salaryBand: undefined,
+  manager: undefined,
 }
-
-const initialEmployees: Employee[] = [
-  {
-    id: "EMP-001",
-    name: "Alex Morgan",
-    jobTitle: "Senior Fullstack Engineer",
-    role: "Admin",
-    department: "Engineering",
-    employmentType: "Full-time",
-    status: "Active",
-    email: "admin@ems.company",
-    phone: "+1 (555) 234-5678",
-    location: "San Francisco, CA (HQ)",
-    joinedDate: "Jan 15, 2023",
-    avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=128&h=128&dpr=2&q=80",
-    manager: "David Vance",
-    salaryBand: "L7 - Executive",
-    bio: "Leads enterprise core infrastructure and real-time backend microservices.",
-  },
-  {
-    id: "EMP-002",
-    name: "Sarah Chen",
-    jobTitle: "Lead Product Designer",
-    role: "Employee",
-    department: "Product",
-    employmentType: "Full-time",
-    status: "Active",
-    email: "employee@ems.company",
-    phone: "+1 (555) 345-6789",
-    location: "New York, NY",
-    joinedDate: "Mar 02, 2023",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&dpr=2&q=80",
-    manager: "Emily Watson",
-    salaryBand: "L5 - Lead",
-    bio: "Directs design systems, accessibility standards, and employee mobile apps.",
-  },
-  {
-    id: "EMP-003",
-    name: "Marcus Vance",
-    jobTitle: "DevOps Architect",
-    role: "Employee",
-    department: "Infrastructure",
-    employmentType: "Full-time",
-    status: "Active",
-    email: "marcus.vance@ems.company",
-    phone: "+1 (555) 456-7890",
-    location: "Austin, TX (Remote)",
-    joinedDate: "Aug 10, 2022",
-    avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=128&h=128&dpr=2&q=80",
-    manager: "David Vance",
-    salaryBand: "L6 - Staff",
-    bio: "Orchestrates multi-cloud Kubernetes clusters and CI/CD security pipelines.",
-  },
-  {
-    id: "EMP-004",
-    name: "Elena Rostova",
-    jobTitle: "Finance Operations Director",
-    role: "Admin",
-    department: "Finance",
-    employmentType: "Full-time",
-    status: "Active",
-    email: "elena.rostova@ems.company",
-    phone: "+1 (555) 567-8901",
-    location: "Chicago, IL",
-    joinedDate: "Nov 01, 2021",
-    avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=128&h=128&dpr=2&q=80",
-    manager: "Executive Board",
-    salaryBand: "L7 - Director",
-    bio: "Oversees global payroll distributions, corporate audit, and compliance.",
-  },
-  {
-    id: "EMP-005",
-    name: "James Wilson",
-    jobTitle: "HR People Partner",
-    role: "Employee",
-    department: "Human Resources",
-    employmentType: "Full-time",
-    status: "On Leave",
-    email: "james.wilson@ems.company",
-    phone: "+1 (555) 678-9012",
-    location: "San Francisco, CA (HQ)",
-    joinedDate: "Jun 14, 2023",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&dpr=2&q=80",
-    manager: "Sarah Jenkins",
-    salaryBand: "L4 - Mid-Senior",
-    bio: "Handles talent acquisition, employee wellbeing, and benefits management.",
-  },
-  {
-    id: "EMP-006",
-    name: "Priya Sharma",
-    jobTitle: "Data Science Lead",
-    role: "Employee",
-    department: "Engineering",
-    employmentType: "Full-time",
-    status: "Remote",
-    email: "priya.sharma@ems.company",
-    phone: "+1 (555) 789-0123",
-    location: "Seattle, WA (Remote)",
-    joinedDate: "Jan 10, 2024",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&h=128&dpr=2&q=80",
-    manager: "Alex Morgan",
-    salaryBand: "L5 - Lead",
-    bio: "Spearheads predictive workforce analytics and business intelligence telemetry.",
-  },
-]
-
-const initialDepartments: Department[] = [
-  {
-    id: "DEP-001",
-    name: "Engineering",
-    code: "ENG",
-    head: "Alex Morgan",
-    headAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=128&h=128&dpr=2&q=80",
-    employeeCount: 78,
-    budget: "$1.42M",
-    color: "bg-blue-500",
-    description: "Core software engineering, QA automation, and developer platforms.",
-  },
-  {
-    id: "DEP-002",
-    name: "Product & Design",
-    code: "PRD",
-    head: "Sarah Chen",
-    headAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&dpr=2&q=80",
-    employeeCount: 32,
-    budget: "$620K",
-    color: "bg-purple-500",
-    description: "Product management, user research, and UI/UX design systems.",
-  },
-  {
-    id: "DEP-003",
-    name: "Infrastructure & DevOps",
-    code: "INF",
-    head: "Marcus Vance",
-    headAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=128&h=128&dpr=2&q=80",
-    employeeCount: 24,
-    budget: "$510K",
-    color: "bg-emerald-500",
-    description: "Cloud architecture, reliability engineering, and system security.",
-  },
-  {
-    id: "DEP-004",
-    name: "Finance & Accounting",
-    code: "FIN",
-    head: "Elena Rostova",
-    headAvatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=128&h=128&dpr=2&q=80",
-    employeeCount: 22,
-    budget: "$380K",
-    color: "bg-amber-500",
-    description: "Financial planning, global payroll, tax compliance, and auditing.",
-  },
-  {
-    id: "DEP-005",
-    name: "Human Resources",
-    code: "HR",
-    head: "James Wilson",
-    headAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&dpr=2&q=80",
-    employeeCount: 18,
-    budget: "$290K",
-    color: "bg-rose-500",
-    description: "Talent acquisition, organizational culture, benefits, and workplace wellness.",
-  },
-]
-
-const initialAttendance: AttendanceRecord[] = [
-  {
-    id: "ATT-001",
-    employeeId: "EMP-001",
-    employeeName: "Alex Morgan",
-    department: "Engineering",
-    date: "Today",
-    checkIn: "08:55 AM",
-    checkOut: "—",
-    status: "On-Time",
-    workHours: "5h 22m",
-    overtime: "+0.0h",
-    location: "SF HQ - Gate A",
-    verified: true,
-  },
-  {
-    id: "ATT-002",
-    employeeId: "EMP-002",
-    employeeName: "Sarah Chen",
-    department: "Product",
-    date: "Today",
-    checkIn: "09:02 AM",
-    checkOut: "—",
-    status: "On-Time",
-    workHours: "5h 15m",
-    overtime: "+0.0h",
-    location: "NYC Office - Fl 4",
-    verified: true,
-  },
-  {
-    id: "ATT-003",
-    employeeId: "EMP-003",
-    employeeName: "Marcus Vance",
-    department: "Infrastructure",
-    date: "Today",
-    checkIn: "08:30 AM",
-    checkOut: "—",
-    status: "Remote",
-    workHours: "5h 47m",
-    overtime: "+0.5h",
-    location: "Remote VPN",
-    verified: true,
-  },
-  {
-    id: "ATT-004",
-    employeeId: "EMP-004",
-    employeeName: "Elena Rostova",
-    department: "Finance",
-    date: "Today",
-    checkIn: "09:35 AM",
-    checkOut: "—",
-    status: "Late",
-    workHours: "4h 42m",
-    overtime: "+0.0h",
-    location: "Chicago Office",
-    verified: true,
-  },
-  {
-    id: "ATT-005",
-    employeeId: "EMP-005",
-    employeeName: "James Wilson",
-    department: "Human Resources",
-    date: "Today",
-    checkIn: "—",
-    checkOut: "—",
-    status: "Absent",
-    workHours: "0h 0m",
-    overtime: "+0.0h",
-    location: "On Approved Leave",
-    verified: false,
-  },
-]
-
-const initialLeaves: LeaveRequest[] = [
-  {
-    id: "LV-2024-001",
-    employeeId: "EMP-005",
-    employeeName: "James Wilson",
-    department: "Human Resources",
-    leaveType: "Annual Leave",
-    startDate: "Aug 20, 2026",
-    endDate: "Aug 27, 2026",
-    days: 5,
-    reason: "Scheduled family vacation and travel.",
-    status: "Approved",
-    appliedOn: "Aug 10, 2026",
-    reviewer: "Sarah Jenkins",
-  },
-  {
-    id: "LV-2024-002",
-    employeeId: "EMP-001",
-    employeeName: "Alex Morgan",
-    department: "Engineering",
-    leaveType: "Casual Leave",
-    startDate: "Aug 28, 2026",
-    endDate: "Aug 29, 2026",
-    days: 2,
-    reason: "Attending React Advanced Conference.",
-    status: "Pending",
-    appliedOn: "Aug 21, 2026",
-  },
-  {
-    id: "LV-2024-003",
-    employeeId: "EMP-004",
-    employeeName: "Elena Rostova",
-    department: "Finance",
-    leaveType: "Sick Leave",
-    startDate: "Sep 02, 2026",
-    endDate: "Sep 03, 2026",
-    days: 2,
-    reason: "Routine medical checkup and recovery.",
-    status: "Pending",
-    appliedOn: "Aug 22, 2026",
-  },
-]
-
-const initialExpenseClaims: ExpenseClaim[] = [
-  {
-    id: "EXP-201",
-    employeeId: "EMP-001",
-    employeeName: "Alex Morgan",
-    title: "AWS Cloud Practitioner Exam Voucher",
-    category: "Learning & Training",
-    amount: 150.0,
-    currency: "USD",
-    date: "Aug 18, 2026",
-    status: "Approved",
-    receiptName: "aws-certification-receipt.pdf",
-    notes: "Approved under quarterly engineering learning budget.",
-  },
-  {
-    id: "EXP-202",
-    employeeId: "EMP-001",
-    employeeName: "Alex Morgan",
-    title: "Client Onboarding Dinner - Fintech Team",
-    category: "Meals & Entertainment",
-    amount: 184.5,
-    currency: "USD",
-    date: "Aug 22, 2026",
-    status: "Pending",
-    receiptName: "client_dinner_sf.jpg",
-    notes: "Dinner with Lead Architect from Stripe partner team.",
-  },
-]
-
-const initialPersonalGoals: PersonalGoal[] = [
-  {
-    id: "G-101",
-    title: "Event-Driven Microservices Migration",
-    category: "Technical Architecture",
-    targetMetric: "Migrate core auth & notification bus to Kafka with 99.99% uptime",
-    currentProgress: 80,
-    dueDate: "Sep 30, 2026",
-    status: "On Track",
-  },
-  {
-    id: "G-102",
-    title: "Mentorship & Junior Developer Onboarding",
-    category: "Leadership & Culture",
-    targetMetric: "Pair program with 2 junior engineers weekly and conduct code walkthroughs",
-    currentProgress: 60,
-    dueDate: "Oct 15, 2026",
-    status: "On Track",
-  },
-  {
-    id: "G-103",
-    title: "Lighthouse Web Performance & A11y Audit",
-    category: "Product Velocity",
-    targetMetric: "Achieve 95+ performance scores on all primary EMS dashboard routes",
-    currentProgress: 45,
-    dueDate: "Nov 01, 2026",
-    status: "At Risk",
-  },
-]
-
-const initialEmployeeDocuments: EmployeeDocument[] = [
-  {
-    id: "DOC-01",
-    name: "Employment_Agreement_Alex_Morgan.pdf",
-    category: "Contracts",
-    size: "1.4 MB",
-    date: "Jan 15, 2023",
-  },
-  {
-    id: "DOC-02",
-    name: "Standard_Health_Benefits_Plan_2026.pdf",
-    category: "Benefits & Policies",
-    size: "2.8 MB",
-    date: "Jan 01, 2026",
-  },
-  {
-    id: "DOC-03",
-    name: "Corporate_Intellectual_Property_NDA.pdf",
-    category: "Contracts",
-    size: "650 KB",
-    date: "Jan 15, 2023",
-  },
-  {
-    id: "DOC-04",
-    name: "W4_Federal_Tax_Withholding_2026.pdf",
-    category: "Tax & Finance",
-    size: "420 KB",
-    date: "Feb 10, 2026",
-  },
-]
-
-const initialTickets: SupportTicket[] = [
-  {
-    id: "TCK-8921",
-    title: "Payroll tax withholdings adjustment for Q3",
-    category: "Payroll & Compensation",
-    priority: "High",
-    status: "In Review",
-    submittedBy: "Marcus Vance",
-    submittedAt: "2 hours ago",
-    department: "Infrastructure",
-    assignee: "Elena Rostova",
-    responses: 3,
-    description: "Need to update my W4 exemptions and state withholdings after relocating to Austin.",
-  },
-  {
-    id: "TCK-8920",
-    title: "Request for second 4K monitor and USB-C dock",
-    category: "IT & Hardware",
-    priority: "Medium",
-    status: "Open",
-    submittedBy: "Sarah Chen",
-    submittedAt: "Yesterday",
-    department: "Product",
-    assignee: "IT Desk",
-    responses: 1,
-    description: "Design workflow requires dual high-gamut external monitors for color fidelity testing.",
-  },
-]
-
-const initialAuditLogs: AuditLog[] = [
-  {
-    id: "AUD-101",
-    actor: "Admin User",
-    action: "Updated system session security timeout to 30 mins",
-    category: "System Config",
-    timestamp: "10 mins ago",
-    ip: "192.168.1.45",
-    status: "Success",
-  },
-  {
-    id: "AUD-102",
-    actor: "Elena Rostova",
-    action: "Generated August 2026 Draft Payroll Ledger",
-    category: "Payroll",
-    timestamp: "1 hour ago",
-    ip: "10.0.4.12",
-    status: "Success",
-  },
-  {
-    id: "AUD-103",
-    actor: "System Sentinel",
-    action: "Automated biometric attendance sync completed (248 records)",
-    category: "Access & Auth",
-    timestamp: "3 hours ago",
-    ip: "127.0.0.1",
-    status: "Success",
-  },
-]
-
-const initialAnnouncements: Announcement[] = [
-  {
-    id: "ANN-1",
-    title: "Q3 All-Hands Townhall Meeting",
-    content:
-      "Join us this Friday at 3:00 PM EST via Google Meet. Leadership will present financial metrics and product roadmap.",
-    author: "Alex Morgan",
-    time: "2 hours ago",
-    priority: "high",
-  },
-  {
-    id: "ANN-2",
-    title: "Office Network Maintenance Window",
-    content:
-      "Infrastructure will be upgrading core switches on Sunday between 02:00 AM - 05:00 AM UTC. Expect brief VPN blips.",
-    author: "Marcus Vance",
-    time: "Yesterday",
-    priority: "normal",
-  },
-]
 
 export const useEMSStore = create<EMSStoreState>()(
   persist(
     (set, get) => ({
-      currentUser: adminUserPreset,
+      isAuthenticated: false,
+      isLoadingAuth: true,
+      setIsAuthenticated: (val: boolean) => set({ isAuthenticated: val }),
+      setIsLoadingAuth: (val: boolean) => set({ isLoadingAuth: val }),
+
+      initializeAuth: async () => {
+        set({ isLoadingAuth: true })
+        if (!isSupabaseConfigured) {
+          set({ isLoadingAuth: false })
+          return
+        }
+
+        try {
+          const { session } = await supabaseGetSession()
+          if (session?.user) {
+            const profile = await fetchCurrentProfile(session.user.id)
+            if (profile) {
+              set({
+                currentUser: profile,
+                isAuthenticated: true,
+                isLoadingAuth: false,
+              })
+            } else {
+              set({
+                currentUser: {
+                  ...defaultCurrentUser,
+                  id: session.user.id,
+                  email: session.user.email || "",
+                  name: session.user.email?.split("@")[0] || "User",
+                },
+                isAuthenticated: true,
+                isLoadingAuth: false,
+              })
+            }
+            // Fetch live database records
+            await get().syncFromSupabase()
+          } else {
+            set({
+              isAuthenticated: false,
+              isLoadingAuth: false,
+            })
+          }
+
+          // Register reactive auth state change listener
+          supabase.auth.onAuthStateChange(async (event, currentSession) => {
+            if (event === "SIGNED_IN" && currentSession?.user) {
+              const profile = await fetchCurrentProfile(currentSession.user.id)
+              if (profile) {
+                set({ currentUser: profile, isAuthenticated: true, isLoadingAuth: false })
+              }
+              get().syncFromSupabase().catch(() => {})
+            } else if (event === "SIGNED_OUT") {
+              set({
+                currentUser: defaultCurrentUser,
+                isAuthenticated: false,
+                isLoadingAuth: false,
+                employees: [],
+                departments: [],
+                attendanceRecords: [],
+                leaveRequests: [],
+                announcements: [],
+                tickets: [],
+                personalGoals: [],
+                auditLogs: [],
+              })
+            }
+          })
+        } catch (err) {
+          console.warn("Auth initialization error:", err)
+          set({ isLoadingAuth: false })
+        }
+      },
+
+      logout: async () => {
+        if (isSupabaseConfigured) {
+          try {
+            await supabaseSignOut()
+          } catch (err) {
+            console.error("Supabase logout error:", err)
+          }
+        }
+        set({
+          isAuthenticated: false,
+          currentUser: defaultCurrentUser,
+          employees: [],
+          departments: [],
+          attendanceRecords: [],
+          leaveRequests: [],
+          announcements: [],
+          tickets: [],
+          personalGoals: [],
+          auditLogs: [],
+        })
+      },
+
+      syncFromSupabase: async () => {
+        if (!isSupabaseConfigured) return
+        try {
+          const [emps, depts, att, leaves, anns, tcks, balance, goals, logs] = await Promise.all([
+            fetchSupabaseEmployees(),
+            fetchSupabaseDepartments(),
+            fetchSupabaseAttendance(),
+            fetchSupabaseLeaves(),
+            fetchSupabaseAnnouncements(),
+            fetchSupabaseTickets(),
+            fetchSupabaseLeaveBalances(),
+            fetchSupabasePersonalGoals(),
+            fetchSupabaseAuditLogs(),
+          ])
+
+          set((state) => ({
+            employees: emps || [],
+            departments: depts || [],
+            attendanceRecords: att || [],
+            leaveRequests: leaves || [],
+            announcements: anns || [],
+            tickets: tcks || [],
+            leaveBalances: balance || state.leaveBalances,
+            personalGoals: goals || [],
+            auditLogs: logs || [],
+          }))
+        } catch (err) {
+          console.warn("Supabase data synchronization error:", err)
+        }
+      },
+
+      currentUser: defaultCurrentUser,
       setCurrentUser: (updates) =>
         set((state) => ({ currentUser: { ...state.currentUser, ...updates } })),
 
       loginAsRole: (role: UserRole) => {
-        if (role === "Admin") {
-          set({ currentUser: adminUserPreset })
-        } else {
-          set({ currentUser: employeeUserPreset })
-        }
+        set((state) => ({
+          currentUser: {
+            ...state.currentUser,
+            role,
+            userRole: role,
+          },
+          isAuthenticated: true,
+        }))
       },
 
       changePassword: (newPassword: string) => {
@@ -614,7 +322,7 @@ export const useEMSStore = create<EMSStoreState>()(
         })
       },
 
-      announcements: initialAnnouncements,
+      announcements: [],
       addAnnouncement: (ann) => {
         const newAnn: Announcement = {
           id: `ANN-${Date.now()}`,
@@ -624,281 +332,324 @@ export const useEMSStore = create<EMSStoreState>()(
         set((state) => ({
           announcements: [newAnn, ...state.announcements],
         }))
+        // Persist to Supabase
+        createSupabaseAnnouncement({
+          title: ann.title,
+          content: ann.content,
+          authorName: ann.author,
+          priority: ann.priority,
+        }).catch(() => {})
       },
 
-  isClockedIn: true,
-  clockInTime: "08:55 AM",
-  todayWorkMinutes: 320,
-  clockIn: () => {
-    const now = new Date()
-    const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    set({ isClockedIn: true, clockInTime: timeStr })
-    get().addAttendanceRecord({
-      employeeId: get().currentUser.id,
-      employeeName: get().currentUser.name,
-      department: get().currentUser.department,
-      date: "Today",
-      checkIn: timeStr,
-      checkOut: "—",
-      status: "On-Time",
-      workHours: "Just started",
-      overtime: "+0.0h",
-      location: "Web Self-Service Punch",
-      verified: true,
-    })
-    get().addAuditLog({
-      actor: get().currentUser.name,
-      action: `Self-Service Clock In recorded at ${timeStr}`,
-      category: "Access & Auth",
-      ip: "192.168.1.1",
-      status: "Success",
-    })
-  },
-  clockOut: () => {
-    const now = new Date()
-    const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    set({ isClockedIn: false })
-    get().addAuditLog({
-      actor: get().currentUser.name,
-      action: `Self-Service Clock Out recorded at ${timeStr}`,
-      category: "Access & Auth",
-      ip: "192.168.1.1",
-      status: "Success",
-    })
-  },
+      isClockedIn: false,
+      clockInTime: null,
+      todayWorkMinutes: 0,
+      clockIn: () => {
+        const now = new Date()
+        const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        set({ isClockedIn: true, clockInTime: timeStr })
+        get().addAttendanceRecord({
+          employeeId: get().currentUser.id,
+          employeeName: get().currentUser.name,
+          department: get().currentUser.department,
+          date: "Today",
+          checkIn: timeStr,
+          checkOut: "—",
+          status: "On-Time",
+          workHours: "Just started",
+          overtime: "+0.0h",
+          location: "Web Self-Service Punch",
+          verified: true,
+        })
+        createSupabaseAttendanceRecord({
+          status: "On Time",
+          location: "Web Self-Service Punch",
+          notes: `Clock in at ${timeStr}`,
+        }).catch(() => {})
+        get().addAuditLog({
+          actor: get().currentUser.name,
+          action: `Self-Service Clock In recorded at ${timeStr}`,
+          category: "Access & Auth",
+          ip: "192.168.1.1",
+          status: "Success",
+        })
+      },
+      clockOut: () => {
+        const now = new Date()
+        const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        set({ isClockedIn: false })
+        get().addAuditLog({
+          actor: get().currentUser.name,
+          action: `Self-Service Clock Out recorded at ${timeStr}`,
+          category: "Access & Auth",
+          ip: "192.168.1.1",
+          status: "Success",
+        })
+      },
 
-  leaveBalances: {
-    annualLeave: { total: 20, used: 6 },
-    sickLeave: { total: 10, used: 2 },
-    casualLeave: { total: 5, used: 2 },
-  },
-  updateLeaveBalances: (updates) =>
-    set((state) => ({ leaveBalances: { ...state.leaveBalances, ...updates } })),
+      leaveBalances: {
+        annualLeave: { total: 20, used: 0 },
+        sickLeave: { total: 10, used: 0 },
+        casualLeave: { total: 5, used: 0 },
+      },
+      updateLeaveBalances: (updates) =>
+        set((state) => ({ leaveBalances: { ...state.leaveBalances, ...updates } })),
 
-  employees: initialEmployees,
-  addEmployee: (emp) => {
-    const id = `EMP-00${get().employees.length + 1}`
-    const newEmp: Employee = { id, ...emp }
-    set((state) => {
-      const updatedDepts = state.departments.map((d) =>
-        d.name === emp.department
-          ? { ...d, employeeCount: d.employeeCount + 1 }
-          : d
-      )
-      return {
-        employees: [newEmp, ...state.employees],
-        departments: updatedDepts,
-      }
-    })
-    get().addAuditLog({
-      actor: get().currentUser.name,
-      action: `Created new employee profile: ${newEmp.name} (${newEmp.jobTitle} • Role: ${newEmp.role})`,
-      category: "Employee Management",
-      ip: "192.168.1.1",
-      status: "Success",
-    })
-    return newEmp
-  },
-  updateEmployee: (id, updates) =>
-    set((state) => ({
-      employees: state.employees.map((e) =>
-        e.id === id ? { ...e, ...updates } : e
-      ),
-    })),
-  deleteEmployee: (id) =>
-    set((state) => {
-      const emp = state.employees.find((e) => e.id === id)
-      return {
-        employees: state.employees.filter((e) => e.id !== id),
-        departments: emp
-          ? state.departments.map((d) =>
-              d.name === emp.department
-                ? { ...d, employeeCount: Math.max(0, d.employeeCount - 1) }
-                : d
-            )
-          : state.departments,
-      }
-    }),
-
-  departments: initialDepartments,
-  addDepartment: (dept) => {
-    const id = `DEP-00${get().departments.length + 1}`
-    set((state) => ({
-      departments: [...state.departments, { id, ...dept }],
-    }))
-  },
-  updateDepartment: (id, updates) =>
-    set((state) => ({
-      departments: state.departments.map((d) =>
-        d.id === id ? { ...d, ...updates } : d
-      ),
-    })),
-  deleteDepartment: (id) =>
-    set((state) => ({
-      departments: state.departments.filter((d) => d.id !== id),
-    })),
-
-  attendanceRecords: initialAttendance,
-  addAttendanceRecord: (record) => {
-    const id = `ATT-00${get().attendanceRecords.length + 1}`
-    set((state) => ({
-      attendanceRecords: [{ id, ...record }, ...state.attendanceRecords],
-    }))
-  },
-  updateAttendanceStatus: (id, status) =>
-    set((state) => ({
-      attendanceRecords: state.attendanceRecords.map((a) =>
-        a.id === id ? { ...a, status } : a
-      ),
-    })),
-
-  leaveRequests: initialLeaves,
-  submitLeaveRequest: (req) => {
-    const id = `LV-2024-00${get().leaveRequests.length + 1}`
-    const newLeave: LeaveRequest = {
-      id,
-      ...req,
-      status: "Pending",
-      appliedOn: "Today",
-    }
-    set((state) => ({
-      leaveRequests: [newLeave, ...state.leaveRequests],
-    }))
-  },
-  updateLeaveStatus: (id, status) =>
-    set((state) => {
-      const target = state.leaveRequests.find((l) => l.id === id)
-      let updatedBalances = state.leaveBalances
-      if (status === "Approved" && target && target.employeeName === state.currentUser.name) {
-        if (target.leaveType === "Annual Leave") {
-          updatedBalances = {
-            ...state.leaveBalances,
-            annualLeave: {
-              ...state.leaveBalances.annualLeave,
-              used: state.leaveBalances.annualLeave.used + target.days,
-            },
+      employees: [],
+      addEmployee: (emp) => {
+        const id = `EMP-${Math.floor(1000 + Math.random() * 9000)}`
+        const newEmp: Employee = { id, ...emp }
+        set((state) => {
+          const updatedDepts = state.departments.map((d) =>
+            d.name === emp.department
+              ? { ...d, employeeCount: d.employeeCount + 1 }
+              : d
+          )
+          return {
+            employees: [newEmp, ...state.employees],
+            departments: updatedDepts,
           }
-        } else if (target.leaveType === "Sick Leave") {
-          updatedBalances = {
-            ...state.leaveBalances,
-            sickLeave: {
-              ...state.leaveBalances.sickLeave,
-              used: state.leaveBalances.sickLeave.used + target.days,
-            },
+        })
+        updateSupabaseProfile(id, newEmp).catch(() => {})
+        get().addAuditLog({
+          actor: get().currentUser.name,
+          action: `Created employee profile: ${newEmp.name} (${newEmp.jobTitle} • Role: ${newEmp.role})`,
+          category: "Employee Management",
+          ip: "192.168.1.1",
+          status: "Success",
+        })
+        return newEmp
+      },
+      updateEmployee: (id, updates) => {
+        set((state) => ({
+          employees: state.employees.map((e) =>
+            e.id === id ? { ...e, ...updates } : e
+          ),
+        }))
+        updateSupabaseProfile(id, updates).catch(() => {})
+      },
+      deleteEmployee: (id) => {
+        set((state) => {
+          const emp = state.employees.find((e) => e.id === id)
+          return {
+            employees: state.employees.filter((e) => e.id !== id),
+            departments: emp
+              ? state.departments.map((d) =>
+                  d.name === emp.department
+                    ? { ...d, employeeCount: Math.max(0, d.employeeCount - 1) }
+                    : d
+                )
+              : state.departments,
           }
-        }
-      }
+        })
+        deleteSupabaseProfile(id).catch(() => {})
+      },
 
-      return {
-        leaveBalances: updatedBalances,
-        leaveRequests: state.leaveRequests.map((l) =>
-          l.id === id
-            ? { ...l, status, reviewer: get().currentUser.name }
-            : l
-        ),
-      }
-    }),
+      departments: [],
+      addDepartment: (dept) => {
+        const id = `DEP-${Date.now()}`
+        set((state) => ({
+          departments: [...state.departments, { id, ...dept }],
+        }))
+        createSupabaseDepartment(dept).catch(() => {})
+      },
+      updateDepartment: (id, updates) => {
+        set((state) => ({
+          departments: state.departments.map((d) =>
+            d.id === id ? { ...d, ...updates } : d
+          ),
+        }))
+        updateSupabaseDepartment(id, updates).catch(() => {})
+      },
+      deleteDepartment: (id) => {
+        set((state) => ({
+          departments: state.departments.filter((d) => d.id !== id),
+        }))
+        deleteSupabaseDepartment(id).catch(() => {})
+      },
 
-  expenseClaims: initialExpenseClaims,
-  submitExpenseClaim: (claim) => {
-    const id = `EXP-${200 + get().expenseClaims.length + 1}`
-    const newClaim: ExpenseClaim = {
-      id,
-      ...claim,
-      date: "Today",
-      status: "Pending",
-    }
-    set((state) => ({
-      expenseClaims: [newClaim, ...state.expenseClaims],
-    }))
-  },
-  updateExpenseClaimStatus: (id, status) =>
-    set((state) => ({
-      expenseClaims: state.expenseClaims.map((c) =>
-        c.id === id ? { ...c, status } : c
-      ),
-    })),
+      attendanceRecords: [],
+      addAttendanceRecord: (record) => {
+        const id = `ATT-${Date.now()}`
+        set((state) => ({
+          attendanceRecords: [{ id, ...record }, ...state.attendanceRecords],
+        }))
+      },
+      updateAttendanceStatus: (id, status) =>
+        set((state) => ({
+          attendanceRecords: state.attendanceRecords.map((a) =>
+            a.id === id ? { ...a, status } : a
+          ),
+        })),
 
-  personalGoals: initialPersonalGoals,
-  updatePersonalGoalProgress: (id, progress) =>
-    set((state) => ({
-      personalGoals: state.personalGoals.map((g) =>
-        g.id === id
-          ? {
-              ...g,
-              currentProgress: progress,
-              status: progress >= 100 ? "Completed" : progress >= 50 ? "On Track" : "At Risk",
-            }
-          : g
-      ),
-    })),
-
-  employeeDocuments: initialEmployeeDocuments,
-
-  tickets: initialTickets,
-  submitTicket: (ticket) => {
-    const id = `TCK-${8920 + get().tickets.length + 1}`
-    set((state) => ({
-      tickets: [
-        {
+      leaveRequests: [],
+      submitLeaveRequest: (req) => {
+        const id = `LV-${Date.now()}`
+        const newLeave: LeaveRequest = {
           id,
-          ...ticket,
+          ...req,
+          status: "Pending",
+          appliedOn: new Date().toISOString().split("T")[0],
+        }
+        set((state) => ({
+          leaveRequests: [newLeave, ...state.leaveRequests],
+        }))
+        createSupabaseLeaveRequest({
+          leaveType: req.leaveType,
+          startDate: req.startDate,
+          endDate: req.endDate,
+          days: req.days,
+          reason: req.reason,
+        }).catch(() => {})
+      },
+      updateLeaveStatus: (id, status) => {
+        set((state) => {
+          const target = state.leaveRequests.find((l) => l.id === id)
+          let updatedBalances = state.leaveBalances
+          if (status === "Approved" && target && target.employeeName === state.currentUser.name) {
+            if (target.leaveType === "Annual Leave") {
+              updatedBalances = {
+                ...state.leaveBalances,
+                annualLeave: {
+                  ...state.leaveBalances.annualLeave,
+                  used: state.leaveBalances.annualLeave.used + target.days,
+                },
+              }
+            } else if (target.leaveType === "Sick Leave") {
+              updatedBalances = {
+                ...state.leaveBalances,
+                sickLeave: {
+                  ...state.leaveBalances.sickLeave,
+                  used: state.leaveBalances.sickLeave.used + target.days,
+                },
+              }
+            }
+          }
+
+          return {
+            leaveBalances: updatedBalances,
+            leaveRequests: state.leaveRequests.map((l) =>
+              l.id === id
+                ? { ...l, status, reviewer: get().currentUser.name }
+                : l
+            ),
+          }
+        })
+        updateSupabaseLeaveStatus(id, status).catch(() => {})
+      },
+
+      expenseClaims: [],
+      submitExpenseClaim: (claim) => {
+        const id = `EXP-${Date.now()}`
+        const newClaim: ExpenseClaim = {
+          id,
+          ...claim,
+          date: "Today",
+          status: "Pending",
+        }
+        set((state) => ({
+          expenseClaims: [newClaim, ...state.expenseClaims],
+        }))
+      },
+      updateExpenseClaimStatus: (id, status) =>
+        set((state) => ({
+          expenseClaims: state.expenseClaims.map((c) =>
+            c.id === id ? { ...c, status } : c
+          ),
+        })),
+
+      personalGoals: [],
+      updatePersonalGoalProgress: (id, progress) =>
+        set((state) => ({
+          personalGoals: state.personalGoals.map((g) =>
+            g.id === id
+              ? {
+                  ...g,
+                  currentProgress: progress,
+                  status: progress >= 100 ? "Completed" : progress >= 50 ? "On Track" : "At Risk",
+                }
+              : g
+          ),
+        })),
+
+      employeeDocuments: [],
+
+      tickets: [],
+      submitTicket: (ticket) => {
+        const id = `TCK-${Date.now()}`
+        const user = get().currentUser
+        const newTicket: SupportTicket = {
+          id,
+          title: ticket.title,
+          category: ticket.category,
+          priority: ticket.priority,
+          department: ticket.department || user.department || "General",
+          description: ticket.description,
+          status: ticket.status || "Open",
+          submittedBy: ticket.submittedBy || user.name || "Employee",
+          assignee: ticket.assignee || "IT Helpdesk",
           submittedAt: "Just now",
           responses: 0,
-        },
-        ...state.tickets,
-      ],
-    }))
-  },
-  updateTicketStatus: (id, status) =>
-    set((state) => ({
-      tickets: state.tickets.map((t) =>
-        t.id === id ? { ...t, status } : t
-      ),
-    })),
+        }
+        set((state) => ({
+          tickets: [newTicket, ...state.tickets],
+        }))
+        createSupabaseTicket({
+          subject: ticket.title,
+          category: ticket.category,
+          priority: ticket.priority,
+          description: ticket.description,
+        }).catch(() => {})
+      },
+      updateTicketStatus: (id, status) => {
+        set((state) => ({
+          tickets: state.tickets.map((t) =>
+            t.id === id ? { ...t, status } : t
+          ),
+        }))
+        updateSupabaseTicketStatus(id, status).catch(() => {})
+      },
 
-  auditLogs: initialAuditLogs,
-  addAuditLog: (log) => {
-    const id = `AUD-${100 + get().auditLogs.length + 1}`
-    set((state) => ({
-      auditLogs: [{ id, timestamp: "Just now", ...log }, ...state.auditLogs],
-    }))
-  },
+      auditLogs: [],
+      addAuditLog: (log) => {
+        const id = `AUD-${Date.now()}`
+        set((state) => ({
+          auditLogs: [{ id, timestamp: "Just now", ...log }, ...state.auditLogs],
+        }))
+        createSupabaseAuditLog({
+          actorName: log.actor,
+          action: log.action,
+          entityType: log.category,
+          ipAddress: log.ip,
+        }).catch(() => {})
+      },
 
-  settings: {
-    companyName: "EMS Enterprise Corp",
-    companyDomain: "ems.company",
-    supportEmail: "support@ems.company",
-    timezone: "America/New_York (EST)",
-    currency: "USD ($)",
-    twoFactorEnforced: true,
-    sessionTimeoutMinutes: 30,
-    autoApproveLeavesBelowDays: 1,
-    emailNotificationsEnabled: true,
-  },
-  updateSettings: (updates) =>
-    set((state) => ({
-      settings: { ...state.settings, ...updates },
-    })),
+      settings: {
+        companyName: "EMS Enterprise Corp",
+        companyDomain: "ems.com",
+        supportEmail: "support@ems.com",
+        timezone: "America/New_York (EST)",
+        currency: "USD ($)",
+        twoFactorEnforced: true,
+        sessionTimeoutMinutes: 30,
+        autoApproveLeavesBelowDays: 1,
+        emailNotificationsEnabled: true,
+      },
+      updateSettings: (updates) =>
+        set((state) => ({
+          settings: { ...state.settings, ...updates },
+        })),
     }),
     {
       name: "ems-enterprise-storage",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
+        isAuthenticated: state.isAuthenticated,
         currentUser: state.currentUser,
         isClockedIn: state.isClockedIn,
         clockInTime: state.clockInTime,
         todayWorkMinutes: state.todayWorkMinutes,
         leaveBalances: state.leaveBalances,
-        employees: state.employees,
-        departments: state.departments,
-        attendanceRecords: state.attendanceRecords,
-        leaveRequests: state.leaveRequests,
-        announcements: state.announcements,
-        expenseClaims: state.expenseClaims,
-        personalGoals: state.personalGoals,
-        tickets: state.tickets,
-        auditLogs: state.auditLogs,
         settings: state.settings,
       }),
     }

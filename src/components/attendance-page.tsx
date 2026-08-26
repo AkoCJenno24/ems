@@ -48,7 +48,7 @@ export interface AttendanceRecord {
   clockOut: string
   workingHours: string
   status: "Present" | "Late" | "Half-Day" | "Absent"
-  method: "Biometric (Gate 1)" | "Biometric (Gate 2)" | "Mobile GPS" | "Remote VPN"
+  method: "Biometric (Gate 1)" | "Biometric (Gate 2)" | "Mobile GPS" | "Remote VPN" | "Web Self-Service Punch"
   location: string
   date: string
 }
@@ -103,128 +103,6 @@ export interface OvertimeRecord {
 }
 
 // Dummy Data
-const initialAttendanceList: AttendanceRecord[] = [
-  {
-    id: "ATT-101",
-    name: "Alex Morgan",
-    role: "Senior Fullstack Engineer",
-    department: "Engineering",
-    avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=128&h=128&dpr=2&q=80",
-    shift: "General (09:00 - 18:00)",
-    clockIn: "08:52 AM",
-    clockOut: "--:--",
-    workingHours: "6h 45m (In Progress)",
-    status: "Present",
-    method: "Biometric (Gate 1)",
-    location: "SF HQ - 4th Floor",
-    date: "Aug 22, 2026",
-  },
-  {
-    id: "ATT-102",
-    name: "Sarah Chen",
-    role: "Lead Product Designer",
-    department: "Product",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&dpr=2&q=80",
-    shift: "General (09:00 - 18:00)",
-    clockIn: "09:04 AM",
-    clockOut: "--:--",
-    workingHours: "6h 33m (In Progress)",
-    status: "Present",
-    method: "Biometric (Gate 2)",
-    location: "NY Studio",
-    date: "Aug 22, 2026",
-  },
-  {
-    id: "ATT-103",
-    name: "Marcus Vance",
-    role: "DevOps Architect",
-    department: "Infrastructure",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=128&h=128&dpr=2&q=80",
-    shift: "Morning (07:00 - 16:00)",
-    clockIn: "06:58 AM",
-    clockOut: "04:10 PM",
-    workingHours: "8h 12m",
-    status: "Present",
-    method: "Remote VPN",
-    location: "Austin, TX (Remote)",
-    date: "Aug 22, 2026",
-  },
-  {
-    id: "ATT-104",
-    name: "Elena Rostova",
-    role: "HR Operations Lead",
-    department: "People & Culture",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&h=128&dpr=2&q=80",
-    shift: "General (09:00 - 18:00)",
-    clockIn: "--:--",
-    clockOut: "--:--",
-    workingHours: "0h 00m",
-    status: "Absent",
-    method: "Mobile GPS",
-    location: "On Approved Medical Leave",
-    date: "Aug 22, 2026",
-  },
-  {
-    id: "ATT-105",
-    name: "David Kim",
-    role: "Frontend Engineer",
-    department: "Engineering",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&dpr=2&q=80",
-    shift: "General (09:00 - 18:00)",
-    clockIn: "09:34 AM",
-    clockOut: "--:--",
-    workingHours: "6h 03m (In Progress)",
-    status: "Late",
-    method: "Biometric (Gate 1)",
-    location: "SF HQ - 2nd Floor",
-    date: "Aug 22, 2026",
-  },
-  {
-    id: "ATT-106",
-    name: "Sophia Martinez",
-    role: "Payroll Specialist",
-    department: "Finance",
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=128&h=128&dpr=2&q=80",
-    shift: "General (09:00 - 18:00)",
-    clockIn: "09:12 AM",
-    clockOut: "01:45 PM",
-    workingHours: "4h 33m",
-    status: "Half-Day",
-    method: "Biometric (Gate 2)",
-    location: "Chicago Branch",
-    date: "Aug 22, 2026",
-  },
-  {
-    id: "ATT-107",
-    name: "Lucas Wright",
-    role: "Growth Marketing Manager",
-    department: "Sales & Marketing",
-    avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=128&h=128&dpr=2&q=80",
-    shift: "General (09:00 - 18:00)",
-    clockIn: "08:48 AM",
-    clockOut: "--:--",
-    workingHours: "6h 49m (In Progress)",
-    status: "Present",
-    method: "Mobile GPS",
-    location: "NY Studio",
-    date: "Aug 22, 2026",
-  },
-  {
-    id: "ATT-108",
-    name: "Maya Lin",
-    role: "QA Automation Engineer",
-    department: "Engineering",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=128&h=128&dpr=2&q=80",
-    shift: "Morning (07:00 - 16:00)",
-    clockIn: "07:22 AM",
-    clockOut: "03:50 PM",
-    workingHours: "8h 28m",
-    status: "Late",
-    method: "Remote VPN",
-    location: "Toronto (Remote)",
-    date: "Aug 22, 2026",
-  },
-]
 
 const initialShifts: ShiftRoster[] = [
   {
@@ -376,15 +254,17 @@ interface AttendancePageProps {
   onTabChange?: (tab: AttendanceTab) => void
 }
 
+import { useEMSStore } from "@/store/use-ems-store"
+
 export function AttendancePage({ initialSubTab = "monitor", onTabChange }: AttendancePageProps) {
   const [currentTab, setCurrentTab] = useState<AttendanceTab>(initialSubTab)
+  const storeAttendance = useEMSStore((state) => state.attendanceRecords)
 
-  // Synchronize internal tab state whenever initialSubTab prop changes from sidebar navigation
-  React.useEffect(() => {
-    if (initialSubTab) {
-      setCurrentTab(initialSubTab)
-    }
-  }, [initialSubTab])
+  const [prevInitialSubTab, setPrevInitialSubTab] = useState(initialSubTab)
+  if (initialSubTab !== prevInitialSubTab) {
+    setPrevInitialSubTab(initialSubTab)
+    setCurrentTab(initialSubTab)
+  }
 
   const handleTabSelect = (tab: AttendanceTab) => {
     setCurrentTab(tab)
@@ -392,7 +272,24 @@ export function AttendancePage({ initialSubTab = "monitor", onTabChange }: Atten
   }
 
   // 1. Live Monitor States
-  const [attendanceRecords] = useState<AttendanceRecord[]>(initialAttendanceList)
+  const attendanceRecords: AttendanceRecord[] = useMemo(() => {
+    return storeAttendance.map((a) => ({
+      id: a.id,
+      name: a.employeeName || "Employee",
+      role: "Staff Member",
+      department: a.department || "Engineering",
+      avatar: undefined,
+      shift: "General (09:00 - 18:00)",
+      clockIn: a.checkIn || "--:--",
+      clockOut: a.checkOut || "--:--",
+      workingHours: a.workHours || "0h 00m",
+      status: (a.status === "On-Time" || a.status === "Remote" ? "Present" : a.status === "Late" ? "Late" : a.status === "Half-Day" ? "Half-Day" : "Absent"),
+      method: "Web Self-Service Punch",
+      location: a.location || "Office HQ",
+      date: a.date || "Today",
+    }))
+  }, [storeAttendance])
+
   const [monitorSearch, setMonitorSearch] = useState("")
   const [monitorStatusFilter, setMonitorStatusFilter] = useState("All")
   const [monitorDeptFilter, setMonitorDeptFilter] = useState("All")

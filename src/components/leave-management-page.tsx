@@ -89,100 +89,7 @@ export interface CalendarStaffLeave {
   dateRange: string
 }
 
-// Dummy Data
-const initialLeaveRequests: LeaveRequest[] = [
-  {
-    id: "LR-301",
-    employeeName: "Elena Rostova",
-    role: "HR Operations Lead",
-    department: "People & Culture",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&h=128&dpr=2&q=80",
-    leaveType: "Medical / Sick Leave",
-    isPaid: true,
-    startDate: "Aug 24, 2026",
-    endDate: "Aug 26, 2026",
-    durationDays: 3,
-    reason: "Scheduled outpatient surgical treatment and follow-up medical recovery.",
-    remainingBalance: 9,
-    totalAllowed: 12,
-    status: "Pending",
-    appliedDate: "Today at 09:15 AM",
-    departmentConflictCount: 0,
-  },
-  {
-    id: "LR-302",
-    employeeName: "Marcus Vance",
-    role: "DevOps Architect",
-    department: "Infrastructure",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=128&h=128&dpr=2&q=80",
-    leaveType: "Annual Paid Leave",
-    isPaid: true,
-    startDate: "Aug 27, 2026",
-    endDate: "Aug 28, 2026",
-    durationDays: 2,
-    reason: "Family relocation and home fiber network setup assistance.",
-    remainingBalance: 14,
-    totalAllowed: 20,
-    status: "Pending",
-    appliedDate: "Yesterday at 04:30 PM",
-    departmentConflictCount: 1,
-  },
-  {
-    id: "LR-303",
-    employeeName: "Sarah Chen",
-    role: "Lead Product Designer",
-    department: "Product",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&dpr=2&q=80",
-    leaveType: "Annual Paid Leave",
-    isPaid: true,
-    startDate: "Sep 02, 2026",
-    endDate: "Sep 08, 2026",
-    durationDays: 5,
-    reason: "Annual vacation and international UX conference participation.",
-    remainingBalance: 16,
-    totalAllowed: 20,
-    status: "Pending",
-    appliedDate: "Aug 20, 2026",
-    departmentConflictCount: 2,
-  },
-  {
-    id: "LR-304",
-    employeeName: "David Kim",
-    role: "Frontend Engineer",
-    department: "Engineering",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&dpr=2&q=80",
-    leaveType: "Compensatory Off",
-    isPaid: true,
-    startDate: "Aug 25, 2026",
-    endDate: "Aug 25, 2026",
-    durationDays: 1,
-    reason: "Comp off for weekend emergency cloud outage deployment sprint.",
-    remainingBalance: 3,
-    totalAllowed: 5,
-    status: "Approved",
-    appliedDate: "Aug 19, 2026",
-    reviewerNote: "Approved per DevOps overtime agreement.",
-    departmentConflictCount: 0,
-  },
-  {
-    id: "LR-305",
-    employeeName: "Lucas Wright",
-    role: "Growth Marketing Manager",
-    department: "Sales & Marketing",
-    avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=128&h=128&dpr=2&q=80",
-    leaveType: "Parental Leave",
-    isPaid: true,
-    startDate: "Sep 10, 2026",
-    endDate: "Sep 24, 2026",
-    durationDays: 10,
-    reason: "Paternity bonding leave following new infant arrival.",
-    remainingBalance: 30,
-    totalAllowed: 60,
-    status: "Pending",
-    appliedDate: "Aug 18, 2026",
-    departmentConflictCount: 0,
-  },
-]
+// Policies & Blackouts Data
 
 const initialPolicies: LeavePolicy[] = [
   {
@@ -278,11 +185,35 @@ interface LeaveManagementPageProps {
   onTabChange?: (tab: LeaveTab) => void
 }
 
+import { useEMSStore } from "@/store/use-ems-store"
+
 export function LeaveManagementPage({ initialSubTab = "inbox", onTabChange }: LeaveManagementPageProps) {
   const [currentTab, setCurrentTab] = useState<LeaveTab>(initialSubTab)
+  const storeLeaves = useEMSStore((state) => state.leaveRequests)
+  const updateStoreLeaveStatus = useEMSStore((state) => state.updateLeaveStatus)
 
   // 1. Leave Requests States
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests)
+  const leaveRequests: LeaveRequest[] = useMemo(() => {
+    return storeLeaves.map((l) => ({
+      id: l.id,
+      employeeName: l.employeeName || "Employee",
+      role: "Team Member",
+      department: l.department || "Engineering",
+      avatar: undefined,
+      leaveType: (l.leaveType as any) || "Annual Paid Leave",
+      isPaid: l.leaveType !== "Unpaid",
+      startDate: l.startDate,
+      endDate: l.endDate,
+      durationDays: l.days,
+      reason: l.reason,
+      remainingBalance: 15,
+      totalAllowed: 20,
+      status: l.status,
+      appliedDate: l.appliedOn,
+      departmentConflictCount: 0,
+    }))
+  }, [storeLeaves])
+
   const [selectedRequestIds, setSelectedRequestIds] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("All")
@@ -306,12 +237,11 @@ export function LeaveManagementPage({ initialSubTab = "inbox", onTabChange }: Le
   // 3. Calendar View States
   const [calendarDeptFilter, setCalendarDeptFilter] = useState("All")
 
-  // Sync internal state when parent initialSubTab changes
-  React.useEffect(() => {
-    if (initialSubTab) {
-      setCurrentTab(initialSubTab)
-    }
-  }, [initialSubTab])
+  const [prevInitialSubTab, setPrevInitialSubTab] = useState(initialSubTab)
+  if (initialSubTab !== prevInitialSubTab) {
+    setPrevInitialSubTab(initialSubTab)
+    setCurrentTab(initialSubTab)
+  }
 
   const handleTabSelect = (tab: LeaveTab) => {
     setCurrentTab(tab)
@@ -341,21 +271,17 @@ export function LeaveManagementPage({ initialSubTab = "inbox", onTabChange }: Le
   // Handlers for Request Actions
   const handleApprove = (id: string) => {
     const req = leaveRequests.find((r) => r.id === id)
-    setLeaveRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: "Approved" } : r))
-    )
+    updateStoreLeaveStatus(id, "Approved")
     toast.success("Leave Request Approved", {
-      description: `Approved ${req?.durationDays} days ${req?.leaveType} for ${req?.employeeName}.`,
+      description: `Approved ${req?.durationDays || 1} days ${req?.leaveType} for ${req?.employeeName}.`,
     })
   }
 
   const handleReject = (id: string) => {
     const req = leaveRequests.find((r) => r.id === id)
-    setLeaveRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: "Rejected" } : r))
-    )
+    updateStoreLeaveStatus(id, "Rejected")
     toast.error("Leave Request Rejected", {
-      description: `Rejected ${req?.leaveType} application for ${req?.employeeName}.`,
+      description: `Rejected ${req?.durationDays || 1} days ${req?.leaveType} for ${req?.employeeName}.`,
     })
   }
 
@@ -378,9 +304,7 @@ export function LeaveManagementPage({ initialSubTab = "inbox", onTabChange }: Le
 
   const handleBulkApprove = () => {
     const count = selectedRequestIds.length
-    setLeaveRequests((prev) =>
-      prev.map((r) => (selectedRequestIds.includes(r.id) ? { ...r, status: "Approved" } : r))
-    )
+    selectedRequestIds.forEach((id) => updateStoreLeaveStatus(id, "Approved"))
     setSelectedRequestIds([])
     toast.success("Bulk Approvals Complete", {
       description: `Successfully approved ${count} leave applications.`,
@@ -389,9 +313,7 @@ export function LeaveManagementPage({ initialSubTab = "inbox", onTabChange }: Le
 
   const handleBulkReject = () => {
     const count = selectedRequestIds.length
-    setLeaveRequests((prev) =>
-      prev.map((r) => (selectedRequestIds.includes(r.id) ? { ...r, status: "Rejected" } : r))
-    )
+    selectedRequestIds.forEach((id) => updateStoreLeaveStatus(id, "Rejected"))
     setSelectedRequestIds([])
     toast.error("Bulk Rejections Complete", {
       description: `Rejected ${count} leave applications.`,
@@ -402,13 +324,6 @@ export function LeaveManagementPage({ initialSubTab = "inbox", onTabChange }: Le
     e.preventDefault()
     if (!selectedRequestForNote) return
 
-    setLeaveRequests((prev) =>
-      prev.map((r) =>
-        r.id === selectedRequestForNote.id
-          ? { ...r, reviewerNote: reviewerNoteText.trim() }
-          : r
-      )
-    )
     toast.success("Reviewer Note Attached", {
       description: `Note saved to request ${selectedRequestForNote.id}.`,
     })

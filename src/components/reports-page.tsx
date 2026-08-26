@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -153,12 +153,11 @@ export function ReportsPage({ initialSubTab = "standard", onTabChange }: Reports
 
   const [exportSuccess, setExportSuccess] = useState(false)
 
-  // Sync internal state when parent initialSubTab changes
-  React.useEffect(() => {
-    if (initialSubTab) {
-      setCurrentTab(initialSubTab)
-    }
-  }, [initialSubTab])
+  const [prevInitialSubTab, setPrevInitialSubTab] = useState(initialSubTab)
+  if (initialSubTab !== prevInitialSubTab) {
+    setPrevInitialSubTab(initialSubTab)
+    setCurrentTab(initialSubTab)
+  }
 
   const handleTabSelect = (tab: ReportsTab) => {
     setCurrentTab(tab)

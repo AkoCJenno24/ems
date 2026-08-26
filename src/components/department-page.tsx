@@ -67,125 +67,7 @@ export interface DesignationItem {
   equityStatus: "Market Compliant" | "Adjusted 2026" | "Under Review"
 }
 
-// Dummy Departments Data
-const initialDepartments: DepartmentItem[] = [
-  {
-    id: "DEP-01",
-    code: "ENG",
-    name: "Engineering",
-    lead: {
-      name: "David Kim",
-      role: "VP of Engineering",
-      email: "david.kim@ems.company",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&dpr=2&q=80",
-    },
-    headcount: 84,
-    capacity: 95,
-    annualBudget: 2400000,
-    spentBudget: 1560000,
-    costCenter: "CC-101-ENG",
-    location: "Austin HQ - Floor 4",
-    subTeams: ["Core Platform", "Frontend Web", "Mobile Apps", "QA & Reliability"],
-    description: "Architecting, developing, and deploying enterprise-grade digital systems and cloud software.",
-  },
-  {
-    id: "DEP-02",
-    code: "PRD",
-    name: "Product & Design",
-    lead: {
-      name: "Sarah Chen",
-      role: "Head of Product & UX",
-      email: "sarah.chen@ems.company",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&dpr=2&q=80",
-    },
-    headcount: 36,
-    capacity: 40,
-    annualBudget: 780000,
-    spentBudget: 510000,
-    costCenter: "CC-102-PRD",
-    location: "Austin HQ - Floor 3",
-    subTeams: ["Product Strategy", "UX Research", "Design Systems", "Growth Experiments"],
-    description: "Customer discovery, product management, wireframing, design sprints, and roadmap delivery.",
-  },
-  {
-    id: "DEP-03",
-    code: "INF",
-    name: "Infrastructure & Security",
-    lead: {
-      name: "Marcus Vance",
-      role: "Principal SecOps Architect",
-      email: "marcus.vance@ems.company",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=128&h=128&dpr=2&q=80",
-    },
-    headcount: 28,
-    capacity: 32,
-    annualBudget: 950000,
-    spentBudget: 620000,
-    costCenter: "CC-103-INF",
-    location: "Austin HQ - SecLab",
-    subTeams: ["Cloud DevOps", "SecOps & SOC", "Database Reliability", "Network Infrastructure"],
-    description: "Maintaining 99.99% cloud uptime, automated CI/CD pipelines, zero-trust security, and VPC infra.",
-  },
-  {
-    id: "DEP-04",
-    code: "HR",
-    name: "People & Culture",
-    lead: {
-      name: "Elena Rostova",
-      role: "Director of People & Talent",
-      email: "elena.rostova@ems.company",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&h=128&dpr=2&q=80",
-    },
-    headcount: 18,
-    capacity: 22,
-    annualBudget: 420000,
-    spentBudget: 280000,
-    costCenter: "CC-104-HR",
-    location: "Austin HQ - Floor 2",
-    subTeams: ["Talent Acquisition", "Employee Experience", "L&D Academy", "Workplace Ops"],
-    description: "Staff recruitment, onboarding, performance reviews, organizational benefits, and culture.",
-  },
-  {
-    id: "DEP-05",
-    code: "FIN",
-    name: "Finance & Operations",
-    lead: {
-      name: "Sophia Martinez",
-      role: "VP of Finance & Controller",
-      email: "sophia.martinez@ems.company",
-      avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=128&h=128&dpr=2&q=80",
-    },
-    headcount: 24,
-    capacity: 26,
-    annualBudget: 450000,
-    spentBudget: 295000,
-    costCenter: "CC-105-FIN",
-    location: "Austin HQ - Floor 2",
-    subTeams: ["Corporate Accounting", "Payroll & Compensation", "FP&A Planning", "Legal & Compliance"],
-    description: "Financial governance, tax compliance, corporate treasury, audits, and statutory reporting.",
-  },
-  {
-    id: "DEP-06",
-    code: "MKT",
-    name: "Sales & Marketing",
-    lead: {
-      name: "Lucas Wright",
-      role: "VP of Global Growth",
-      email: "lucas.wright@ems.company",
-      avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=128&h=128&dpr=2&q=80",
-    },
-    headcount: 58,
-    capacity: 65,
-    annualBudget: 1100000,
-    spentBudget: 740000,
-    costCenter: "CC-106-MKT",
-    location: "Austin HQ - Floor 5",
-    subTeams: ["Enterprise Sales", "Demand Generation", "Brand Strategy", "Customer Success"],
-    description: "Revenue generation, client relationship management, multi-channel branding, and market expansion.",
-  },
-]
-
-// Dummy Designations & Pay Bands Data
+// Designations & Pay Bands Data
 const initialDesignations: DesignationItem[] = [
   {
     id: "DES-101",
@@ -298,11 +180,40 @@ interface DepartmentPageProps {
   onTabChange?: (tab: DepartmentTab) => void
 }
 
+import { useEMSStore } from "@/store/use-ems-store"
+
 export function DepartmentPage({ initialSubTab = "departments", onTabChange }: DepartmentPageProps) {
   const [currentTab, setCurrentTab] = useState<DepartmentTab>(initialSubTab)
+  const storeDepartments = useEMSStore((state) => state.departments)
+  const addStoreDepartment = useEMSStore((state) => state.addDepartment)
+  const updateStoreDepartment = useEMSStore((state) => state.updateDepartment)
 
   // 1. Department States
-  const [departments, setDepartments] = useState<DepartmentItem[]>(initialDepartments)
+  const departments: DepartmentItem[] = useMemo(() => {
+    return storeDepartments.map((d) => {
+      const rawBudget = typeof d.budget === "string" ? Number(d.budget.replace(/[^0-9.-]+/g, "")) || 0 : 0
+      return {
+        id: d.id,
+        code: d.code,
+        name: d.name,
+        lead: {
+          name: d.head || "Department Lead",
+          role: "Department Lead",
+          email: `${(d.head || "lead").toLowerCase().replace(/\s+/g, ".")}@ems.com`,
+          avatar: d.headAvatar,
+        },
+        headcount: d.employeeCount || 0,
+        capacity: (d.employeeCount || 0) + 10,
+        annualBudget: rawBudget,
+        spentBudget: Math.round(rawBudget * 0.6),
+        costCenter: `CC-${d.code}`,
+        location: "San Francisco, CA (HQ)",
+        subTeams: ["Core Team", "Operations"],
+        description: d.description || "",
+      }
+    })
+  }, [storeDepartments])
+
   const [deptSearch, setDeptSearch] = useState("")
   const [showDeptModal, setShowDeptModal] = useState(false)
   const [editingDept, setEditingDept] = useState<DepartmentItem | null>(null)
@@ -336,12 +247,11 @@ export function DepartmentPage({ initialSubTab = "departments", onTabChange }: D
   const [desigMedian, setDesigMedian] = useState<number>(140000)
   const [desigExperience, setDesigExperience] = useState("4 - 7 Years")
 
-  // Sync internal state when parent initialSubTab changes
-  React.useEffect(() => {
-    if (initialSubTab) {
-      setCurrentTab(initialSubTab)
-    }
-  }, [initialSubTab])
+  const [prevInitialSubTab, setPrevInitialSubTab] = useState(initialSubTab)
+  if (initialSubTab !== prevInitialSubTab) {
+    setPrevInitialSubTab(initialSubTab)
+    setCurrentTab(initialSubTab)
+  }
 
   const handleTabSelect = (tab: DepartmentTab) => {
     setCurrentTab(tab)
@@ -417,61 +327,31 @@ export function DepartmentPage({ initialSubTab = "departments", onTabChange }: D
     e.preventDefault()
     if (!deptName.trim() || !deptCode.trim() || !deptLeadName.trim()) return
 
-    const teamsArray = deptSubTeams
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean)
-
     if (editingDept) {
       // Edit existing
-      setDepartments((prev) =>
-        prev.map((d) =>
-          d.id === editingDept.id
-            ? {
-                ...d,
-                name: deptName.trim(),
-                code: deptCode.trim().toUpperCase(),
-                lead: {
-                  ...d.lead,
-                  name: deptLeadName.trim(),
-                  role: deptLeadRole.trim() || d.lead.role,
-                  email: deptLeadEmail.trim() || d.lead.email,
-                },
-                annualBudget: Number(deptBudget),
-                capacity: Number(deptCapacity),
-                location: deptLocation.trim(),
-                subTeams: teamsArray.length > 0 ? teamsArray : d.subTeams,
-                description: deptDesc.trim() || d.description,
-              }
-            : d
-        )
-      )
+      updateStoreDepartment(editingDept.id, {
+        name: deptName.trim(),
+        code: deptCode.trim().toUpperCase(),
+        head: deptLeadName.trim(),
+        budget: `$${Number(deptBudget).toLocaleString()}`,
+        description: deptDesc.trim(),
+      })
       toast.success("Department Updated", {
         description: `Changes saved for ${deptName.trim()} (${deptCode.trim().toUpperCase()}).`,
       })
     } else {
       // Create new
-      const newDept: DepartmentItem = {
-        id: `DEP-${Date.now()}`,
-        code: deptCode.trim().toUpperCase(),
+      addStoreDepartment({
         name: deptName.trim(),
-        lead: {
-          name: deptLeadName.trim(),
-          role: deptLeadRole.trim() || "Department Lead",
-          email: deptLeadEmail.trim() || `${deptLeadName.toLowerCase().replace(/\s+/g, ".")}@ems.company`,
-        },
-        headcount: 0,
-        capacity: Number(deptCapacity) || 20,
-        annualBudget: Number(deptBudget) || 500000,
-        spentBudget: 0,
-        costCenter: `CC-${Math.floor(100 + Math.random() * 900)}-${deptCode.trim().toUpperCase()}`,
-        location: deptLocation.trim() || "Austin HQ",
-        subTeams: teamsArray.length > 0 ? teamsArray : ["General Operations"],
+        code: deptCode.trim().toUpperCase(),
+        head: deptLeadName.trim(),
+        budget: `$${Number(deptBudget).toLocaleString()}`,
         description: deptDesc.trim() || "Newly established organizational division.",
-      }
-      setDepartments([...departments, newDept])
+        color: "bg-blue-500",
+        employeeCount: 0,
+      })
       toast.success("Department Created", {
-        description: `${newDept.name} established under ${newDept.lead.name}.`,
+        description: `${deptName.trim()} established under ${deptLeadName.trim()}.`,
       })
     }
 

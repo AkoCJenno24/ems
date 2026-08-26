@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react"
+import React, { createContext, useContext, useEffect, useState, useSyncExternalStore } from "react"
 
 type Theme = "dark" | "light" | "system"
 
@@ -22,6 +22,18 @@ const initialState: ThemeProviderState = {
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
+function subscribeSystemTheme(callback: () => void) {
+  if (typeof window === "undefined") return () => {}
+  const mql = window.matchMedia("(prefers-color-scheme: dark)")
+  mql.addEventListener("change", callback)
+  return () => mql.removeEventListener("change", callback)
+}
+
+function getSystemThemeSnapshot() {
+  if (typeof window === "undefined") return false
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = "system",
@@ -31,30 +43,20 @@ export function ThemeProvider({
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   )
-  const [isDark, setIsDark] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false
-    const saved = localStorage.getItem(storageKey) as Theme
-    if (saved === "dark") return true
-    if (saved === "light") return false
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-  })
+
+  const isSystemDark = useSyncExternalStore(
+    subscribeSystemTheme,
+    getSystemThemeSnapshot,
+    () => false
+  )
+
+  const isDark = theme === "dark" || (theme === "system" && isSystemDark)
 
   useEffect(() => {
     const root = window.document.documentElement
     root.classList.remove("light", "dark")
-
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light"
-      root.classList.add(systemTheme)
-      setIsDark(systemTheme === "dark")
-      return
-    }
-
-    root.classList.add(theme)
-    setIsDark(theme === "dark")
-  }, [theme])
+    root.classList.add(isDark ? "dark" : "light")
+  }, [isDark])
 
   const value = {
     theme,
@@ -72,7 +74,7 @@ export function ThemeProvider({
   )
 }
 
-export const useTheme = () => {
+export function useTheme() {
   const context = useContext(ThemeProviderContext)
   if (context === undefined)
     throw new Error("useTheme must be used within a ThemeProvider")

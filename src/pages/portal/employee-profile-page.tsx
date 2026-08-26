@@ -19,15 +19,12 @@ import {
   Phone,
   MapPin,
   Calendar,
-  CreditCard,
   FileText,
   Shield,
   Edit2,
   Save,
   Lock,
   Key,
-  CheckCircle2,
-  X,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -36,9 +33,9 @@ export function EmployeeProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [profileForm, setProfileForm] = useState({
-    phone: currentUser.phone,
-    location: currentUser.location,
-    emergencyContact: "Emily Morgan (+1 555-987-6543) - Spouse",
+    phone: currentUser?.phone || "",
+    location: currentUser?.location || "",
+    emergencyContact: "Emergency Contact (+1 555-0199)",
   })
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -81,6 +78,8 @@ export function EmployeeProfilePage() {
     })
   }
 
+  const safeName = currentUser?.name || "Employee"
+
   return (
     <div className="space-y-6">
       {/* Header Banner */}
@@ -90,22 +89,24 @@ export function EmployeeProfilePage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between -mt-12">
             <div className="flex items-end gap-4">
               <Avatar className="size-24 border-4 border-background shadow-md">
-                <AvatarImage src={currentUser.avatar} alt={currentUser.name} />
+                <AvatarImage src={currentUser?.avatar} alt={safeName} />
                 <AvatarFallback className="text-xl">
-                  {currentUser.name.slice(0, 2).toUpperCase()}
+                  {safeName.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="space-y-1 mb-1">
                 <div className="flex items-center gap-2">
                   <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                    {currentUser.name}
+                    {safeName}
                   </h1>
-                  <Badge variant="secondary" className="text-xs">
-                    {currentUser.salaryBand}
-                  </Badge>
+                  {currentUser?.salaryBand && (
+                    <Badge variant="secondary" className="text-xs">
+                      {currentUser.salaryBand}
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {currentUser.jobTitle || currentUser.title} • {currentUser.department}
+                  {currentUser?.jobTitle || currentUser?.title || "Staff"} • {currentUser?.department || "General"}
                 </p>
               </div>
             </div>
@@ -186,10 +187,11 @@ export function EmployeeProfilePage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setIsEditing(false)}
+                      className="cursor-pointer"
                     >
                       Cancel
                     </Button>
-                    <Button type="submit" size="sm" className="gap-1.5 font-semibold">
+                    <Button type="submit" size="sm" className="gap-1.5 font-semibold cursor-pointer">
                       <Save className="size-3.5" />
                       Save Changes
                     </Button>
@@ -202,7 +204,7 @@ export function EmployeeProfilePage() {
                     <div>
                       <span className="text-muted-foreground">Work Email</span>
                       <div className="font-semibold text-foreground mt-0.5">
-                        {currentUser.email}
+                        {currentUser?.email || "employee@ems.com"}
                       </div>
                     </div>
                   </div>
@@ -212,7 +214,7 @@ export function EmployeeProfilePage() {
                     <div>
                       <span className="text-muted-foreground">Direct Phone</span>
                       <div className="font-semibold text-foreground mt-0.5">
-                        {currentUser.phone}
+                        {currentUser?.phone || "+1 (555) 345-6789"}
                       </div>
                     </div>
                   </div>
@@ -222,7 +224,7 @@ export function EmployeeProfilePage() {
                     <div>
                       <span className="text-muted-foreground">Primary Location</span>
                       <div className="font-semibold text-foreground mt-0.5">
-                        {currentUser.location}
+                        {currentUser?.location || "San Francisco, CA (HQ)"}
                       </div>
                     </div>
                   </div>
@@ -232,7 +234,7 @@ export function EmployeeProfilePage() {
                     <div>
                       <span className="text-muted-foreground">Joined Organization</span>
                       <div className="font-semibold text-foreground mt-0.5">
-                        {currentUser.joinedDate}
+                        {currentUser?.joinedDate || "2026-01-01"}
                       </div>
                     </div>
                   </div>
@@ -253,16 +255,22 @@ export function EmployeeProfilePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {employeeDocuments.map((doc) => (
-                <DocumentCard
-                  key={doc.id}
-                  id={doc.id}
-                  name={doc.name}
-                  category={doc.category}
-                  size={doc.size}
-                  date={doc.date}
-                />
-              ))}
+              {employeeDocuments.length === 0 ? (
+                <div className="py-6 text-center text-xs text-muted-foreground">
+                  No documents uploaded yet.
+                </div>
+              ) : (
+                employeeDocuments.map((doc) => (
+                  <DocumentCard
+                    key={doc.id}
+                    id={doc.id}
+                    name={doc.name}
+                    category={doc.category}
+                    size={doc.size}
+                    date={doc.date}
+                  />
+                ))
+              )}
             </CardContent>
           </Card>
         </div>
@@ -285,10 +293,10 @@ export function EmployeeProfilePage() {
                 </Avatar>
                 <div className="space-y-0.5">
                   <div className="font-semibold text-foreground">
-                    {currentUser.manager || "David Vance"}
+                    {currentUser?.manager || "System Administrator"}
                   </div>
                   <div className="text-muted-foreground">
-                    VP of Engineering & Core Systems
+                    Operations & Leadership
                   </div>
                   <Badge variant="outline" className="text-[10px] mt-1">
                     Direct Manager
@@ -298,65 +306,26 @@ export function EmployeeProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Direct Deposit Card */}
+          {/* Security & Credentials */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-bold flex items-center gap-2">
-                <CreditCard className="size-4 text-emerald-500" />
-                Direct Deposit Account
+                <Lock className="size-4 text-emerald-500" />
+                Security Credentials
               </CardTitle>
+              <CardDescription className="text-xs">
+                Manage your account authentication password
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-xs">
-              <div className="rounded-xl border border-border/70 p-3.5 bg-muted/20 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Bank Name:</span>
-                  <span className="font-semibold text-foreground">JPMorgan Chase Bank</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Account Type:</span>
-                  <span className="font-semibold text-foreground">Checking (Primary)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Account Number:</span>
-                  <span className="font-mono font-semibold text-foreground">•••• 9842</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Routing Number:</span>
-                  <span className="font-mono font-semibold text-foreground">•••• 1204</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Account Security & Password Card */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <Lock className="size-4 text-amber-500" />
-                Account Security & Password
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-xs">
-              <div className="rounded-xl border border-border/70 p-3.5 bg-muted/20 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Access Password:</span>
-                  <Badge variant="outline" className="text-[10px] text-emerald-600 dark:text-emerald-400 border-emerald-500/20 bg-emerald-500/10">
-                    Active & Encrypted
-                  </Badge>
-                </div>
-                <p className="text-muted-foreground leading-relaxed">
-                  Update your initial or temporary login password to a personal password.
-                </p>
-                <Button
-                  onClick={() => setShowPasswordModal(true)}
-                  variant="outline"
-                  size="sm"
-                  className="w-full gap-1.5 text-xs font-semibold cursor-pointer"
-                >
-                  <Key className="size-3.5 text-primary" />
-                  Change My Password
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                onClick={() => setShowPasswordModal(true)}
+                className="w-full gap-2 text-xs font-semibold cursor-pointer"
+              >
+                <Key className="size-3.5" />
+                Change Password
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -364,89 +333,54 @@ export function EmployeeProfilePage() {
 
       {/* Change Password Modal */}
       {showPasswordModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <Card className="w-full max-w-md shadow-2xl border-border animate-in zoom-in-95">
-            <CardHeader className="border-b pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <Lock className="size-4 text-primary" />
-                  Update Account Password
-                </CardTitle>
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold">Change Password</h3>
+              <p className="text-xs text-muted-foreground">
+                Set a new secure password for your EMS account.
+              </p>
+            </div>
+            <form onSubmit={handleChangePasswordSubmit} className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold">New Password</label>
+                <Input
+                  type="password"
+                  placeholder="Enter new password (min. 6 characters)"
+                  value={passwordForm.newPassword}
+                  onChange={(e) =>
+                    setPasswordForm({ ...passwordForm, newPassword: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold">Confirm New Password</label>
+                <Input
+                  type="password"
+                  placeholder="Re-enter new password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) =>
+                    setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <Button
-                  variant="ghost"
-                  size="icon"
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => setShowPasswordModal(false)}
-                  className="h-7 w-7 rounded-full cursor-pointer"
                 >
-                  <X className="h-4 w-4" />
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm">
+                  Update Password
                 </Button>
               </div>
-              <CardDescription className="text-xs">
-                Set a secure permanent password for your employee account
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="p-5">
-              <form onSubmit={handleChangePasswordSubmit} className="space-y-3.5 text-xs">
-                <div className="space-y-1.5">
-                  <Label htmlFor="curr-pass" className="text-xs">Current / Temporary Password</Label>
-                  <Input
-                    id="curr-pass"
-                    type="password"
-                    placeholder="Enter current or temporary key"
-                    value={passwordForm.currentPassword}
-                    onChange={(e) =>
-                      setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="new-pass" className="text-xs">New Password (Min. 6 chars) *</Label>
-                  <Input
-                    id="new-pass"
-                    type="password"
-                    placeholder="Enter new permanent password"
-                    value={passwordForm.newPassword}
-                    onChange={(e) =>
-                      setPasswordForm({ ...passwordForm, newPassword: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="confirm-pass" className="text-xs">Confirm New Password *</Label>
-                  <Input
-                    id="confirm-pass"
-                    type="password"
-                    placeholder="Re-type new password"
-                    value={passwordForm.confirmPassword}
-                    onChange={(e) =>
-                      setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="pt-2 flex justify-end gap-2 border-t mt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowPasswordModal(false)}
-                    className="cursor-pointer"
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" size="sm" className="gap-1.5 cursor-pointer">
-                    <CheckCircle2 className="size-3.5" />
-                    Save New Password
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+            </form>
+          </div>
         </div>
       )}
     </div>

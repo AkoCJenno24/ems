@@ -254,12 +254,11 @@ export function PerformancePage({ initialSubTab = "cycles", onTabChange }: Perfo
   const [evaluationScore, setEvaluationScore] = useState<number>(4.5)
   const [evaluationFeedback, setEvaluationFeedback] = useState("")
 
-  // Sync internal state when parent initialSubTab changes
-  React.useEffect(() => {
-    if (initialSubTab) {
-      setCurrentTab(initialSubTab)
-    }
-  }, [initialSubTab])
+  const [prevInitialSubTab, setPrevInitialSubTab] = useState(initialSubTab)
+  if (initialSubTab !== prevInitialSubTab) {
+    setPrevInitialSubTab(initialSubTab)
+    setCurrentTab(initialSubTab)
+  }
 
   const handleTabSelect = (tab: PerformanceTab) => {
     setCurrentTab(tab)

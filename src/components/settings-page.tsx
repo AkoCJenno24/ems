@@ -286,12 +286,11 @@ export function SettingsPage({ initialSubTab = "roles", onTabChange }: SettingsP
 
   const [prefSaveSuccess, setPrefSaveSuccess] = useState(false)
 
-  // Sync internal state when parent initialSubTab changes
-  React.useEffect(() => {
-    if (initialSubTab) {
-      setCurrentTab(initialSubTab)
-    }
-  }, [initialSubTab])
+  const [prevInitialSubTab, setPrevInitialSubTab] = useState(initialSubTab)
+  if (initialSubTab !== prevInitialSubTab) {
+    setPrevInitialSubTab(initialSubTab)
+    setCurrentTab(initialSubTab)
+  }
 
   const handleTabSelect = (tab: SettingsTab) => {
     setCurrentTab(tab)

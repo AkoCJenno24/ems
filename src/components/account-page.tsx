@@ -100,22 +100,26 @@ const INITIAL_SESSIONS: SessionItem[] = [
   },
 ]
 
-export function AccountPage({ userEmail = "admin@ems.company" }: AccountPageProps) {
+import { useEMSStore } from "@/store/use-ems-store"
+
+export function AccountPage({ userEmail }: AccountPageProps) {
+  const { currentUser, setCurrentUser, changePassword } = useEMSStore()
   const [activeTab, setActiveTab] = useState<AccountSubTab>("profile")
 
   // Profile Form States
-  const [firstName, setFirstName] = useState("Jenno")
-  const [lastName, setLastName] = useState("Administrator")
-  const [email, setEmail] = useState(userEmail)
-  const [jobTitle, setJobTitle] = useState("Enterprise Operations Lead")
-  const [department, setDepartment] = useState("Executive & Operations")
-  const [phone, setPhone] = useState("+1 (555) 382-9011")
+  const nameParts = (currentUser?.name || "System Administrator").split(" ")
+  const [firstName, setFirstName] = useState(nameParts[0] || "System")
+  const [lastName, setLastName] = useState(nameParts.slice(1).join(" ") || "Admin")
+  const [email, setEmail] = useState(userEmail || currentUser?.email || "admin@ems.com")
+  const [jobTitle, setJobTitle] = useState(currentUser?.jobTitle || currentUser?.title || "System Administrator")
+  const [department, setDepartment] = useState(currentUser?.department || "Engineering & Technology")
+  const [phone, setPhone] = useState(currentUser?.phone || "+1 (555) 234-5678")
   const [timezone, setTimezone] = useState("America/New_York")
   const [bio, setBio] = useState(
-    "Senior administrator managing organization workforce operations, multi-tier approvals, and compliance policies."
+    currentUser?.bio || "Senior administrator managing workforce operations, multi-tier approvals, and compliance policies."
   )
   const [avatarUrl, setAvatarUrl] = useState(
-    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&dpr=2&q=80"
+    currentUser?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&dpr=2&q=80"
   )
   const [isSavingProfile, setIsSavingProfile] = useState(false)
 
@@ -168,12 +172,21 @@ export function AccountPage({ userEmail = "admin@ems.company" }: AccountPageProp
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault()
     setIsSavingProfile(true)
+    setCurrentUser({
+      name: `${firstName} ${lastName}`.trim(),
+      email,
+      jobTitle,
+      department,
+      phone,
+      bio,
+      avatar: avatarUrl,
+    })
     setTimeout(() => {
       setIsSavingProfile(false)
       toast.success("Profile updated successfully!", {
         description: "Your personal details and contact preferences have been saved.",
       })
-    }, 600)
+    }, 400)
   }
 
   const handleUpdatePassword = (e: React.FormEvent) => {
@@ -192,6 +205,7 @@ export function AccountPage({ userEmail = "admin@ems.company" }: AccountPageProp
     }
 
     setIsUpdatingPassword(true)
+    changePassword(newPassword)
     setTimeout(() => {
       setIsUpdatingPassword(false)
       setCurrentPassword("")
@@ -200,7 +214,7 @@ export function AccountPage({ userEmail = "admin@ems.company" }: AccountPageProp
       toast.success("Password changed successfully!", {
         description: "Please use your new password for your next login.",
       })
-    }, 800)
+    }, 400)
   }
 
   const handleCopySecretKey = () => {

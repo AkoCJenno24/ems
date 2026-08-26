@@ -65,162 +65,6 @@ export interface Employee {
   mustChangePassword?: boolean
 }
 
-export const initialEmployeeList: Employee[] = [
-  {
-    id: "EMP-001",
-    name: "Alex Morgan",
-    jobTitle: "Senior Fullstack Engineer",
-    role: "Admin",
-    department: "Engineering",
-    employmentType: "Full-time",
-    status: "Active",
-    email: "alex.morgan@ems.company",
-    phone: "+1 (555) 234-5678",
-    location: "San Francisco, CA (HQ)",
-    joinedDate: "Jan 15, 2023",
-    avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=128&h=128&dpr=2&q=80",
-    manager: "David Vance",
-    salaryBand: "L5 - Senior",
-    bio: "Leads enterprise core infrastructure and real-time backend microservices.",
-  },
-  {
-    id: "EMP-002",
-    name: "Sarah Chen",
-    jobTitle: "Lead Product Designer",
-    role: "Employee",
-    department: "Product",
-    employmentType: "Full-time",
-    status: "Active",
-    email: "sarah.chen@ems.company",
-    phone: "+1 (555) 345-6789",
-    location: "New York, NY",
-    joinedDate: "Mar 02, 2023",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&dpr=2&q=80",
-    manager: "Emily Watson",
-    salaryBand: "L5 - Lead",
-    bio: "Directs design systems, accessibility standards, and employee mobile apps.",
-  },
-  {
-    id: "EMP-003",
-    name: "Marcus Vance",
-    jobTitle: "DevOps Architect",
-    role: "Employee",
-    department: "Infrastructure",
-    employmentType: "Full-time",
-    status: "Remote",
-    email: "marcus.vance@ems.company",
-    phone: "+1 (555) 456-7890",
-    location: "Austin, TX (Remote)",
-    joinedDate: "Jun 11, 2023",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=128&h=128&dpr=2&q=80",
-    manager: "Alex Morgan",
-    salaryBand: "L6 - Staff",
-    bio: "Maintains Kubernetes clusters, Terraform clouds, and CI/CD pipelines.",
-  },
-  {
-    id: "EMP-004",
-    name: "Elena Rostova",
-    jobTitle: "HR Operations Lead",
-    role: "Admin",
-    department: "People & Culture",
-    employmentType: "Full-time",
-    status: "On Leave",
-    email: "elena.rostova@ems.company",
-    phone: "+1 (555) 567-8901",
-    location: "San Francisco, CA (HQ)",
-    joinedDate: "Nov 04, 2023",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&h=128&dpr=2&q=80",
-    manager: "Jessica Alba",
-    salaryBand: "L4 - Specialist",
-    bio: "Oversees employee lifecycle, payroll coordination, and talent engagement.",
-  },
-  {
-    id: "EMP-005",
-    name: "David Kim",
-    jobTitle: "Frontend Engineer",
-    role: "Employee",
-    department: "Engineering",
-    employmentType: "Full-time",
-    status: "Active",
-    email: "david.kim@ems.company",
-    phone: "+1 (555) 678-9012",
-    location: "Seattle, WA",
-    joinedDate: "Feb 20, 2024",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&dpr=2&q=80",
-    manager: "Alex Morgan",
-    salaryBand: "L3 - Mid-level",
-    bio: "Specializes in React, Next.js, and performant user interface rendering.",
-  },
-  {
-    id: "EMP-006",
-    name: "Sophia Martinez",
-    jobTitle: "Payroll Specialist",
-    role: "Employee",
-    department: "Finance",
-    employmentType: "Full-time",
-    status: "Active",
-    email: "sophia.martinez@ems.company",
-    phone: "+1 (555) 789-0123",
-    location: "Chicago, IL",
-    joinedDate: "May 10, 2024",
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=128&h=128&dpr=2&q=80",
-    manager: "Robert Thorne",
-    salaryBand: "L3 - Specialist",
-    bio: "Administers corporate salary disbursement, tax withholdings, and benefit plans.",
-  },
-  {
-    id: "EMP-007",
-    name: "Lucas Wright",
-    jobTitle: "Growth Marketing Manager",
-    role: "Employee",
-    department: "Sales & Marketing",
-    employmentType: "Full-time",
-    status: "Active",
-    email: "lucas.wright@ems.company",
-    phone: "+1 (555) 890-1234",
-    location: "New York, NY",
-    joinedDate: "Jul 18, 2024",
-    avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=128&h=128&dpr=2&q=80",
-    manager: "Clara Oswald",
-    salaryBand: "L4 - Manager",
-    bio: "Executes enterprise account-based marketing and omni-channel acquisition.",
-  },
-  {
-    id: "EMP-008",
-    name: "Maya Lin",
-    jobTitle: "QA Automation Engineer",
-    role: "Employee",
-    department: "Engineering",
-    employmentType: "Contract",
-    status: "Remote",
-    email: "maya.lin@ems.company",
-    phone: "+1 (555) 901-2345",
-    location: "Toronto, Canada (Remote)",
-    joinedDate: "Sep 05, 2024",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=128&h=128&dpr=2&q=80",
-    manager: "Alex Morgan",
-    salaryBand: "Contractor",
-    bio: "Maintains end-to-end Playwright tests and Cypress regression suites.",
-  },
-  {
-    id: "EMP-009",
-    name: "Jonathan Reed",
-    jobTitle: "Security Compliance Officer",
-    role: "Admin",
-    department: "Infrastructure",
-    employmentType: "Full-time",
-    status: "Inactive",
-    email: "jonathan.reed@ems.company",
-    phone: "+1 (555) 012-3456",
-    location: "San Francisco, CA",
-    joinedDate: "Oct 12, 2022",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=128&h=128&dpr=2&q=80",
-    manager: "Marcus Vance",
-    salaryBand: "L5 - Senior",
-    bio: "Archived personnel record - previous SOC2 auditor and ISO compliance lead.",
-  },
-]
-
 import { useEMSStore } from "@/store/use-ems-store"
 
 interface ManageEmployeesProps {
@@ -264,12 +108,13 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 6
 
-  // Sync initialOpenAdd prop
-  React.useEffect(() => {
+  const [prevInitialOpenAdd, setPrevInitialOpenAdd] = useState(initialOpenAdd)
+  if (initialOpenAdd !== prevInitialOpenAdd) {
+    setPrevInitialOpenAdd(initialOpenAdd)
     if (initialOpenAdd) {
       setShowAddModal(true)
     }
-  }, [initialOpenAdd])
+  }
 
   // Filtered List
   const filteredEmployees = useMemo(() => {
@@ -361,7 +206,7 @@ export function ManageEmployees({ initialOpenAdd = false, onCloseAdd }: ManageEm
       name: formData.name.trim(),
       email:
         formData.email?.trim() ||
-        `${formData.name.toLowerCase().replace(/\s+/g, ".")}@ems.company`,
+        `${formData.name.toLowerCase().replace(/\s+/g, ".")}@ems.com`,
       jobTitle: formData.jobTitle.trim(),
       role: (formData.role as "Admin" | "Employee") || "Employee",
       department: formData.department || "Engineering",

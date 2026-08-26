@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -16,6 +16,8 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { ThemeToggle } from "@/components/shared/theme-toggle"
 import { useEMSStore } from "@/store/use-ems-store"
+import { supabaseSignIn, fetchCurrentProfile } from "@/lib/supabase-service"
+import { isSupabaseConfigured } from "@/lib/supabase"
 import {
   Zap,
   Eye,
@@ -37,17 +39,20 @@ interface LoginPageProps {
 
 export function LoginPage({ onSuccess }: LoginPageProps) {
   const navigate = useNavigate()
-  const { loginAsRole, setCurrentUser } = useEMSStore()
+  const [searchParams] = useSearchParams()
+  const redirectParam = searchParams.get("redirect")
 
-  const [email, setEmail] = useState("admin@ems.company")
-  const [password, setPassword] = useState("password123")
+  const { setCurrentUser, setIsAuthenticated, syncFromSupabase } = useEMSStore()
+
+  const [email, setEmail] = useState("admin@ems.com")
+  const [password, setPassword] = useState("Password123")
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSuccess, setIsSuccess] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
@@ -68,43 +73,82 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
 
     setIsLoading(true)
 
-    // Determine role based on email
-    const isEmployee = email.toLowerCase().includes("employee") || email.toLowerCase().includes("sarah")
-    const targetRole = isEmployee ? "Employee" : "Admin"
-
-    setTimeout(() => {
-      setIsLoading(false)
-      setIsSuccess(true)
-      loginAsRole(targetRole)
-      setCurrentUser({ email })
-
-      toast.success("Welcome back!", {
-        description: `Logged in as ${targetRole === "Admin" ? "Admin / Owner" : "Employee"} (${email})`,
-      })
-
-      if (onSuccess) {
-        onSuccess(email)
-      } else {
-        if (targetRole === "Admin") {
-          navigate("/")
-        } else {
-          navigate("/portal")
+    try {
+      if (isSupabaseConfigured) {
+        const { data, error: authError } = await supabaseSignIn(email, password)
+        if (authError) {
+          setError(authError.message)
+          toast.error("Sign In Failed", { description: authError.message })
+          setIsLoading(false)
+          return
         }
+
+        if (data?.user) {
+          const profile = await fetchCurrentProfile(data.user.id)
+          const targetRole = profile?.role || (email.toLowerCase().includes("admin") ? "Admin" : "Employee")
+          
+          if (profile) {
+            setCurrentUser(profile)
+          } else {
+            setCurrentUser({
+              id: data.user.id,
+              email: data.user.email || email,
+              name: data.user.user_metadata?.name || email.split("@")[0],
+              role: targetRole,
+              userRole: targetRole,
+            })
+          }
+
+          setIsAuthenticated(true)
+          setIsSuccess(true)
+
+          // Proactively sync Supabase data in background
+          syncFromSupabase().catch(() => {})
+
+          toast.success("Welcome back!", {
+            description: `Logged in as ${targetRole === "Admin" ? "Administrator" : "Employee"} (${email})`,
+          })
+
+          setTimeout(() => {
+            setIsLoading(false)
+            if (onSuccess) {
+              onSuccess(email)
+            } else {
+              if (redirectParam) {
+                navigate(redirectParam)
+              } else if (targetRole === "Admin") {
+                navigate("/")
+              } else {
+                navigate("/portal")
+              }
+            }
+          }, 400)
+          return
+        }
+      } else {
+        setError("Supabase backend connection is not configured.")
+        toast.error("Configuration Error", {
+          description: "Supabase environment variables are missing.",
+        })
+        setIsLoading(false)
       }
-    }, 500)
+    } catch (err: unknown) {
+      setIsLoading(false)
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred during authentication."
+      setError(msg)
+      toast.error("Authentication Error", { description: msg })
+    }
   }
 
   const handleQuickLogin = (role: "Admin" | "Employee") => {
     if (role === "Admin") {
-      setEmail("admin@ems.company")
-      setPassword("password123")
-      loginAsRole("Admin")
-      toast.info("Admin / Owner credentials loaded")
+      setEmail("admin@ems.com")
+      setPassword("Password123")
+      toast.info("Admin credentials loaded (admin@ems.com)")
     } else {
-      setEmail("employee@ems.company")
-      setPassword("password123")
-      loginAsRole("Employee")
-      toast.info("Employee credentials loaded")
+      setEmail("employee@ems.com")
+      setPassword("Password123")
+      toast.info("Employee credentials loaded (employee@ems.com)")
     }
   }
 
@@ -157,13 +201,13 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
               </div>
             )}
 
-            {/* Quick Demo Preset Switchers */}
+            {/* Quick Preset Switchers */}
             <div className="grid grid-cols-2 gap-3">
               <Button
                 variant="outline"
                 type="button"
                 className={`h-auto flex-col items-start gap-1 p-3 text-left cursor-pointer transition-all ${
-                  email === "admin@ems.company" ? "border-primary bg-primary/5" : ""
+                  email === "admin@ems.com" ? "border-primary bg-primary/5" : ""
                 }`}
                 onClick={() => handleQuickLogin("Admin")}
               >
@@ -172,7 +216,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
                   Admin / Owner
                 </div>
                 <span className="text-[10px] text-muted-foreground">
-                  Full console & billing
+                  admin@ems.com
                 </span>
               </Button>
 
@@ -180,7 +224,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
                 variant="outline"
                 type="button"
                 className={`h-auto flex-col items-start gap-1 p-3 text-left cursor-pointer transition-all ${
-                  email === "employee@ems.company" ? "border-emerald-500 bg-emerald-500/5" : ""
+                  email === "employee@ems.com" ? "border-emerald-500 bg-emerald-500/5" : ""
                 }`}
                 onClick={() => handleQuickLogin("Employee")}
               >
@@ -189,7 +233,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
                   Employee
                 </div>
                 <span className="text-[10px] text-muted-foreground">
-                  Self-service portal
+                  employee@ems.com
                 </span>
               </Button>
             </div>
@@ -214,7 +258,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="name@company.com"
+                    placeholder="admin@ems.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-9 text-xs"
@@ -290,7 +334,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Signing in...
+                    Signing in with Supabase...
                   </>
                 ) : (
                   <>
@@ -304,7 +348,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
 
           <CardFooter className="flex flex-col items-center justify-center border-t py-4 text-xs text-muted-foreground space-y-2">
             <div>
-              Protected by Enterprise Role-Based Access Control.
+              Connected to Supabase Real-Time Authentication & Database.
             </div>
           </CardFooter>
         </Card>
@@ -337,7 +381,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
             href="#support"
             onClick={(e) => {
               e.preventDefault()
-              navigate("/portal/helpdesk")
+              navigate("/login")
             }}
             className="hover:underline"
           >

@@ -12,8 +12,9 @@ export interface CurrentUser {
   phone: string
   location: string
   joinedDate: string
-  salaryBand: string
-  manager: string
+  salaryBand?: string
+  manager?: string
+  bio?: string
   userRole?: UserRole
   password?: string
   temporaryPassword?: string
